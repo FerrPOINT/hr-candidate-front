@@ -1,0 +1,7 @@
+# Generated code structure reorganization:
+# - All generated files moved to generated-src/
+# - Manual files remain in src/api/
+# - generated-src/ contains ONLY generated files
+
+# Allow models/index.ts to be generated
+# generated-src/client/models/index.ts 

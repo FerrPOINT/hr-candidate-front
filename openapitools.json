@@ -1,0 +1,145 @@
+{
+  "$schema": "./node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.13.0",
+    "generators": {
+      "agents-ai": {
+        "generatorName": "typescript-axios",
+        "inputSpec": "api/openapi-agents-ai.yaml",
+        "output": "generated-src/client",
+        "additionalProperties": {
+          "supportsES6": true,
+          "withSeparateModelsAndApi": true,
+          "apiPackage": "apis",
+          "modelPackage": "models",
+          "enumPropertyNaming": "original",
+          "modelPropertyNaming": "original",
+          "typescriptThreePlus": true,
+          "withoutPrefixEnums": true,
+          "apiNameSuffix": "Api"
+        },
+        "ignoreFileOverride": ".openapi-generator-ignore"
+      },
+      "analytics": {
+        "generatorName": "typescript-axios",
+        "inputSpec": "api/openapi-analytics.yaml",
+        "output": "generated-src/client",
+        "additionalProperties": {
+          "supportsES6": true,
+          "withSeparateModelsAndApi": true,
+          "apiPackage": "apis",
+          "modelPackage": "models",
+          "enumPropertyNaming": "original",
+          "modelPropertyNaming": "original",
+          "typescriptThreePlus": true,
+          "withoutPrefixEnums": true,
+          "apiNameSuffix": "Api"
+        },
+        "ignoreFileOverride": ".openapi-generator-ignore"
+      },
+      "auth-users": {
+        "generatorName": "typescript-axios",
+        "inputSpec": "api/openapi-auth-users.yaml",
+        "output": "generated-src/client",
+        "additionalProperties": {
+          "supportsES6": true,
+          "withSeparateModelsAndApi": true,
+          "apiPackage": "apis",
+          "modelPackage": "models",
+          "enumPropertyNaming": "original",
+          "modelPropertyNaming": "original",
+          "typescriptThreePlus": true,
+          "withoutPrefixEnums": true,
+          "apiNameSuffix": "Api"
+        },
+        "ignoreFileOverride": ".openapi-generator-ignore"
+      },
+      "candidates": {
+        "generatorName": "typescript-axios",
+        "inputSpec": "api/openapi-candidates.yaml",
+        "output": "generated-src/client",
+        "additionalProperties": {
+          "supportsES6": true,
+          "withSeparateModelsAndApi": true,
+          "apiPackage": "apis",
+          "modelPackage": "models",
+          "enumPropertyNaming": "original",
+          "modelPropertyNaming": "original",
+          "typescriptThreePlus": true,
+          "withoutPrefixEnums": true,
+          "apiNameSuffix": "Api"
+        },
+        "ignoreFileOverride": ".openapi-generator-ignore"
+      },
+      "interviews-questions": {
+        "generatorName": "typescript-axios",
+        "inputSpec": "api/openapi-interviews-questions.yaml",
+        "output": "generated-src/client",
+        "additionalProperties": {
+          "supportsES6": true,
+          "withSeparateModelsAndApi": true,
+          "apiPackage": "apis",
+          "modelPackage": "models",
+          "enumPropertyNaming": "original",
+          "modelPropertyNaming": "original",
+          "typescriptThreePlus": true,
+          "withoutPrefixEnums": true,
+          "apiNameSuffix": "Api"
+        },
+        "ignoreFileOverride": ".openapi-generator-ignore"
+      },
+      "positions": {
+        "generatorName": "typescript-axios",
+        "inputSpec": "api/openapi-positions.yaml",
+        "output": "generated-src/client",
+        "additionalProperties": {
+          "supportsES6": true,
+          "withSeparateModelsAndApi": true,
+          "apiPackage": "apis",
+          "modelPackage": "models",
+          "enumPropertyNaming": "original",
+          "modelPropertyNaming": "original",
+          "typescriptThreePlus": true,
+          "withoutPrefixEnums": true,
+          "apiNameSuffix": "Api"
+        },
+        "ignoreFileOverride": ".openapi-generator-ignore"
+      },
+      "settings": {
+        "generatorName": "typescript-axios",
+        "inputSpec": "api/openapi-settings.yaml",
+        "output": "generated-src/client",
+        "additionalProperties": {
+          "supportsES6": true,
+          "withSeparateModelsAndApi": true,
+          "apiPackage": "apis",
+          "modelPackage": "models",
+          "enumPropertyNaming": "original",
+          "modelPropertyNaming": "original",
+          "typescriptThreePlus": true,
+          "withoutPrefixEnums": true,
+          "apiNameSuffix": "Api"
+        },
+        "ignoreFileOverride": ".openapi-generator-ignore"
+      },
+      "webhooks": {
+        "generatorName": "typescript-axios",
+        "inputSpec": "api/openapi-webhooks.yaml",
+        "output": "generated-src/client",
+        "additionalProperties": {
+          "supportsES6": true,
+          "withSeparateModelsAndApi": true,
+          "apiPackage": "apis",
+          "modelPackage": "models",
+          "enumPropertyNaming": "original",
+          "modelPropertyNaming": "original",
+          "typescriptThreePlus": true,
+          "withoutPrefixEnums": true,
+          "apiNameSuffix": "Api"
+        },
+        "ignoreFileOverride": ".openapi-generator-ignore"
+      }
+    }
+  }
+}

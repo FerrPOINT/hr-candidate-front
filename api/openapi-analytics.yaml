@@ -1,0 +1,317 @@
+openapi: 3.0.0
+info:
+  title: HR Recruiter API — Analytics & Reports
+  version: 1.0.0
+  description: |
+    OpenAPI спецификация для аналитики и отчетов (отчеты, статистика, лента активности).
+    Самодостаточный файл для генерации и документации.
+  contact:
+    name: HR Recruiter Team
+    email: support@hr-recruiter.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local server
+  - url: https://api.hr-recruiter.com/api/v1
+    description: Production server
+tags:
+  - name: Analytics & Reports
+    description: Статистика и отчеты
+paths:
+  /reports:
+    get:
+      operationId: getReports
+      tags:
+        - Analytics & Reports
+      summary: Получить отчеты по собеседованиям
+      description: Генерирует и возвращает отчеты, сгруппированные по месяцам.
+      responses:
+        '200':
+          description: Успешный ответ с отчетами
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MonthlyReport'
+  /stats/interviews:
+    get:
+      operationId: getInterviewsStats
+      tags:
+        - Analytics & Reports
+      summary: Статистика по интервью
+      security:
+        - AdminAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewStats'
+  /activity:
+    get:
+      operationId: getActivityFeed
+      tags:
+        - Analytics & Reports
+      summary: Получить ленту активности
+      description: Возвращает ленту активности пользователей в системе
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+            minimum: 1
+          description: Количество записей для получения
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum:
+              - all
+              - interview
+              - position
+              - candidate
+              - hired
+            default: all
+          description: Фильтр по типу активности
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Номер страницы (начиная с 0)
+      responses:
+        '200':
+          description: Лента активности
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityPaginatedResponse'
+        '400':
+          description: Некорректные параметры
+        '500':
+          description: Ошибка сервера
+  /stats/positions:
+    get:
+      operationId: getPositionsStats
+      tags:
+        - Analytics & Reports
+      summary: Статистика по вакансиям
+      description: Возвращает расширенную статистику по вакансиям с группировками
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: query
+          name: includeDetails
+          schema:
+            type: boolean
+            default: false
+          description: Включить детальную статистику с группировками
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionStats'
+  /stats/candidates:
+    get:
+      operationId: getCandidatesStats
+      tags:
+        - Analytics & Reports
+      summary: Статистика по кандидатам
+      description: Возвращает расширенную статистику по кандидатам с группировками
+      security:
+        - AdminAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateStats'
+components:
+  schemas:
+    MonthlyReport:
+      type: object
+      properties:
+        month:
+          type: string
+          example: Июль 2024
+        totalInterviews:
+          type: integer
+        successful:
+          type: integer
+        unsuccessful:
+          type: integer
+        avgScore:
+          type: number
+          format: float
+        dynamics:
+          type: integer
+          description: Динамика в % по сравнению с прошлым месяцем
+          example: 15
+    InterviewStats:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Общее количество интервью
+        successful:
+          type: integer
+          description: Успешно завершенные интервью
+        unsuccessful:
+          type: integer
+          description: Неуспешно завершенные интервью
+        inProgress:
+          type: integer
+          description: Интервью в процессе
+        notStarted:
+          type: integer
+          description: Интервью не начатые
+        cancelled:
+          type: integer
+          description: Отмененные интервью
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        activityType:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        entityId:
+          type: integer
+        entityType:
+          type: string
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - activityType
+        - title
+        - createdAt
+    ActivityPaginatedResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+        totalElements:
+          type: integer
+          format: int64
+          description: Общее количество элементов
+          example: 150
+        totalPages:
+          type: integer
+          format: int64
+          description: Общее количество страниц
+          example: 15
+        number:
+          type: integer
+          format: int64
+          description: Номер текущей страницы (начиная с 0)
+          example: 0
+        size:
+          type: integer
+          format: int64
+          description: Размер страницы
+          example: 10
+      required:
+        - content
+        - totalElements
+        - totalPages
+        - number
+        - size
+    PositionStats:
+      type: object
+      properties:
+        positionId:
+          type: integer
+          format: int64
+          description: ID позиции (если статистика для конкретной позиции)
+        interviewsTotal:
+          type: integer
+          description: Всего собеседований
+        interviewsSuccessful:
+          type: integer
+          description: Успешно завершенные
+        interviewsInProgress:
+          type: integer
+          description: В процессе
+        interviewsUnsuccessful:
+          type: integer
+          description: Неуспешно завершенные
+        total:
+          type: integer
+          description: Общее количество вакансий
+        active:
+          type: integer
+          description: Активные вакансии
+        paused:
+          type: integer
+          description: Вакансии на паузе
+        archived:
+          type: integer
+          description: Архивные вакансии
+        byLevel:
+          type: object
+          properties:
+            junior:
+              type: integer
+              description: Количество junior позиций
+            middle:
+              type: integer
+              description: Количество middle позиций
+            senior:
+              type: integer
+              description: Количество senior позиций
+            lead:
+              type: integer
+              description: Количество lead позиций
+          description: Группировка по уровням (если includeDetails=true)
+    CandidateStats:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Общее количество кандидатов
+        inProgress:
+          type: integer
+          description: Кандидаты в процессе
+        finished:
+          type: integer
+          description: Завершенные кандидаты
+        hired:
+          type: integer
+          description: Нанятые кандидаты
+        rejected:
+          type: integer
+          description: Отклоненные кандидаты
+  securitySchemes:
+    CandidateAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    AdminAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT 

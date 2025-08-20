@@ -1,0 +1,12 @@
+node_modules
+
+# Исключаем только .idea, но оставляем runConfigurations
+.idea/
+build/
+!.idea/runConfigurations/
+
+# Секреты и переменные окружения
+.env
+
+# Generated API client code
+generated-src/

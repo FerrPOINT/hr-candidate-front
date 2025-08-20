@@ -1,0 +1,491 @@
+openapi: 3.0.0
+info:
+  title: HR Recruiter API — Positions
+  version: 1.0.0
+  description: |
+    OpenAPI спецификация для управления вакансиями (positions).
+    Самодостаточный файл для генерации и документации.
+  contact:
+    name: HR Recruiter Team
+    email: support@hr-recruiter.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local server
+  - url: https://api.hr-recruiter.com/api/v1
+    description: Production server
+tags:
+  - name: Positions
+    description: Управление вакансиями
+paths:
+  /positions:
+    get:
+      tags:
+        - Positions
+      summary: Получить список вакансий
+      description: Получить список всех вакансий с возможностью фильтрации и пагинации. Собеседования не включаются в ответ.
+      operationId: listPositions
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/PositionStatusEnum'
+          description: Фильтр по статусу вакансии
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Поиск по названию, компании или описанию
+        - in: query
+          name: owner
+          schema:
+            type: string
+          description: Фильтр по владельцу (me/all)
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+          description: Номер страницы
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 20
+          description: Размер страницы
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: createdAt
+          description: Поле для сортировки
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      tags:
+        - Positions
+      summary: Создать вакансию
+      operationId: createPosition
+      security:
+        - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+  /positions/{id}:
+    get:
+      tags:
+        - Positions
+      summary: Получить вакансию по ID
+      operationId: getPosition
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вакансии
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+        '404':
+          description: Вакансия не найдена
+    put:
+      tags:
+        - Positions
+      summary: Обновить вакансию
+      operationId: updatePosition
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вакансии
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+        '404':
+          description: Вакансия не найдена
+    delete:
+      tags:
+        - Positions
+      summary: Удалить вакансию
+      operationId: deletePosition
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вакансии
+      responses:
+        '204':
+          description: Вакансия удалена
+        '404':
+          description: Вакансия не найдена
+  /positions/{id}/questions/voice/status:
+    get:
+      tags:
+        - Positions
+      summary: Получить статус озвучки всех вопросов позиции
+      description: Возвращает агрегированную статистику по озвучке вопросов позиции
+      operationId: getPositionQuestionsVoiceStatus
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID позиции
+      responses:
+        '200':
+          description: Статус озвучки вопросов позиции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionVoiceStatusResponse'
+        '404':
+          description: Позиция не найдена
+  /positions/{id}/questions/voice/bulk:
+    post:
+      tags:
+        - Positions
+      summary: Озвучить все вопросы позиции
+      description: Асинхронно озвучивает все вопросы позиции. Возвращает taskId для отслеживания прогресса.
+      operationId: synthesizeAllPositionQuestions
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID позиции
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkVoiceSynthesisRequest'
+      responses:
+        '202':
+          description: Задача принята
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkVoiceSynthesisResponse'
+        '404':
+          description: Позиция не найдена
+        '409':
+          description: Не все вопросы готовы к озвучке
+components:
+  schemas:
+    Position:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        company:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/PositionStatusEnum'
+        publicLink:
+          type: string
+        minScore:
+          type: number
+        avgScore:
+          type: number
+        createdBy:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        teamId:
+          type: integer
+          nullable: true
+        managerId:
+          type: integer
+          nullable: true
+        topics:
+          type: array
+          items:
+            type: string
+        language:
+          type: string
+        showOtherLang:
+          type: boolean
+        answerTime:
+          type: integer
+        level:
+          $ref: '#/components/schemas/PositionLevelEnum'
+        saveAudio:
+          type: boolean
+        saveVideo:
+          type: boolean
+        randomOrder:
+          type: boolean
+        questionType:
+          type: string
+        questionsCount:
+          type: integer
+        checkType:
+          type: string
+      required:
+        - id
+        - title
+        - status
+        - createdBy
+        - createdAt
+        - updatedAt
+    PositionCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        company:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/PositionStatusEnum'
+        topics:
+          type: array
+          items:
+            type: string
+        minScore:
+          type: number
+        language:
+          type: string
+        answerTime:
+          type: integer
+        level:
+          $ref: '#/components/schemas/PositionLevelEnum'
+        saveAudio:
+          type: boolean
+        saveVideo:
+          type: boolean
+        randomOrder:
+          type: boolean
+        questionType:
+          type: string
+        questionsCount:
+          type: integer
+        checkType:
+          type: string
+        teamId:
+          type: integer
+        managerId:
+          type: integer
+      required:
+        - title
+    PositionUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/PositionCreateRequest'
+    PartialUpdatePositionRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/PositionStatusEnum'
+    PaginatedResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        number:
+          type: integer
+        size:
+          type: integer
+    PositionStatusEnum:
+      type: string
+      enum:
+      - ACTIVE
+      - PAUSED
+      - ARCHIVED
+    PositionLevelEnum:
+      type: string
+      enum:
+      - JUNIOR
+      - MIDDLE
+      - SENIOR
+      - LEAD
+    GetPositionPublicLink200Response:
+      type: object
+      properties:
+        publicLink:
+          type: string
+      required:
+        - publicLink
+    PositionStats:
+      type: object
+      properties:
+        positionId:
+          type: integer
+        interviewsTotal:
+          type: integer
+        interviewsSuccessful:
+          type: integer
+        interviewsInProgress:
+          type: integer
+        interviewsUnsuccessful:
+          type: integer
+      required:
+        - positionId
+        - interviewsTotal
+        - interviewsSuccessful
+        - interviewsInProgress
+        - interviewsUnsuccessful
+    PositionVoiceStatusResponse:
+      type: object
+      properties:
+        positionId:
+          type: integer
+          format: int64
+          description: ID позиции
+        total:
+          type: integer
+          description: Общее количество вопросов
+        ready:
+          type: integer
+          description: Количество готовых вопросов
+        pending:
+          type: integer
+          description: Количество вопросов в процессе
+        error:
+          type: integer
+          description: Количество вопросов с ошибками
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoiceStatusItem'
+          description: Детальная информация по каждому вопросу
+      required:
+        - positionId
+        - total
+        - ready
+        - pending
+        - error
+        - items
+    VoiceStatusItem:
+      type: object
+      properties:
+        questionId:
+          type: integer
+          format: int64
+          description: ID вопроса
+        status:
+          type: string
+          enum: [NONE, PENDING, READY, ERROR]
+          description: Статус озвучки вопроса
+        fileUrl:
+          type: string
+          description: URL к аудиофайлу (если готов)
+        hashMismatch:
+          type: boolean
+          description: Требуется ли переозвучка из-за изменений
+        errorMessage:
+          type: string
+          description: Сообщение об ошибке (если есть)
+      required:
+        - questionId
+        - status
+        - hashMismatch
+    BulkVoiceSynthesisRequest:
+      type: object
+      properties:
+        voiceId:
+          type: string
+          description: ID голоса для озвучки
+        model:
+          type: string
+          description: Модель TTS
+        format:
+          type: string
+          enum: [mp3, wav, m4a]
+          default: mp3
+          description: Формат аудио
+        forceRegenerate:
+          type: boolean
+          default: false
+          description: Принудительная переозвучка всех вопросов
+    BulkVoiceSynthesisResponse:
+      type: object
+      properties:
+        positionId:
+          type: integer
+          format: int64
+          description: ID позиции
+        accepted:
+          type: boolean
+          description: Задача принята
+        total:
+          type: integer
+          description: Общее количество вопросов
+        taskId:
+          type: string
+          description: ID задачи для отслеживания прогресса
+        estimatedDuration:
+          type: integer
+          description: Ориентировочная длительность в секундах
+      required:
+        - positionId
+        - accepted
+        - total
+        - taskId 

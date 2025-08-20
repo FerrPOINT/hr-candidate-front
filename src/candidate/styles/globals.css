@@ -1,0 +1,540 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Display:wght@500&display=swap');
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Typography */
+  --font-size: 14px;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  
+  /* Typography scale */
+  --text-h1: 56px;
+  --text-h2: 48px; 
+  --text-h3: 40px;
+  --text-h4: 32px;
+  --text-h5: 24px;
+  --text-base: 16px;
+  --text-sm: 14px;
+  
+  /* Interview specific typography */
+  --text-interview-message: 18px;
+  --text-interview-button: 16px;
+  --line-height-interview-message: 24px;
+  --line-height-interview-button: 20px;
+  
+  /* Core colors */
+  --background: rgba(245, 246, 241, 1);
+  --foreground: rgba(10, 13, 20, 1);
+  --card: rgba(245, 246, 241, 1);
+  --card-foreground: rgba(10, 13, 20, 1);
+  --popover: rgba(245, 246, 241, 1);
+  --popover-foreground: rgba(10, 13, 20, 1);
+  
+  /* Interactive colors */
+  --primary: rgba(55, 93, 251, 1);
+  --primary-foreground: rgba(255, 255, 255, 1);
+  --secondary: rgba(246, 248, 250, 1);
+  --secondary-foreground: rgba(82, 88, 102, 1);
+  --muted: rgba(226, 228, 233, 1);
+  --muted-foreground: rgba(134, 140, 152, 1);
+  --accent: rgba(53, 185, 233, 1);
+  --accent-foreground: rgba(255, 255, 255, 1);
+  --destructive: rgba(223, 28, 65, 1);
+  --destructive-foreground: rgba(255, 255, 255, 1);
+  
+  /* Form elements */
+  --border: rgba(226, 228, 233, 1);
+  --input: rgba(245, 246, 241, 1);
+  --input-background: rgba(245, 246, 241, 1);
+  --ring: rgba(55, 93, 251, 1);
+  
+  /* Interview specific colors */
+  --interview-bg: rgba(233, 234, 226, 1);
+  --interview-substrate: rgba(245, 246, 241, 1);
+  --interview-accent: rgba(225, 99, 73, 1);
+  --interview-accent-hover: rgba(213, 90, 66, 1);
+  
+  /* Layout */
+  --radius: 10px;
+  --radius-button: 10px;
+  --radius-card: 12px;
+  --radius-tooltip: 4px;
+  
+  /* Shadows */
+  --elevation-sm: 0px 1px 2px 0px rgba(228, 229, 231, 0.24);
+}
+
+.dark {
+  --background: rgba(10, 13, 20, 1);
+  --foreground: rgba(255, 255, 255, 1);
+  --card: rgba(25, 28, 35, 1);
+  --card-foreground: rgba(255, 255, 255, 1);
+  --popover: rgba(25, 28, 35, 1);
+  --popover-foreground: rgba(10, 13, 20, 1);
+  --secondary: rgba(40, 43, 50, 1);
+  --secondary-foreground: rgba(200, 200, 200, 1);
+  --muted: rgba(60, 63, 70, 1);
+  --muted-foreground: rgba(160, 160, 160, 1);
+  --border: rgba(60, 63, 70, 1);
+  --input: rgba(25, 28, 35, 1);
+  --input-background: rgba(25, 28, 35, 1);
+  --elevation-sm: 0px 1px 2px 0px rgba(0, 0, 0, 0.24);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-ring: var(--ring);
+  --color-interview-bg: var(--interview-bg);
+  --color-interview-substrate: var(--interview-substrate);
+  --color-interview-accent: var(--interview-accent);
+  --color-interview-accent-hover: var(--interview-accent-hover);
+  
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius-card);
+  --shadow-sm: var(--elevation-sm);
+}
+
+/* Base styles */
+* {
+  border-color: var(--border);
+  outline-color: var(--ring);
+}
+
+html {
+  font-size: var(--font-size);
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', sans-serif;
+  /* Базовая оптимизация */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: 'Inter Display', sans-serif;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+}
+
+h1 { font-size: var(--text-h1); }
+h2 { font-size: var(--text-h2); }
+h3 { font-size: var(--text-h3); }
+h4 { font-size: var(--text-h4); }
+h5 { font-size: var(--text-h5); }
+
+p, span {
+  font-family: 'Inter', sans-serif;
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.5;
+}
+
+label {
+  font-family: 'Inter', sans-serif;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+}
+
+button, input {
+  font-family: 'Inter', sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--foreground); /* Добавляю цвет текста для видимости */
+}
+
+button {
+  font-weight: var(--font-weight-medium);
+}
+
+input {
+  font-weight: var(--font-weight-normal);
+  height: 48px; /* Правильная высота для инпута */
+  padding: 12px 16px; /* Правильные отступы */
+  font-size: 14px; /* Оптимальный размер шрифта */
+  line-height: 1.4; /* Оптимальная высота строки */
+  border-radius: 8px; /* Скругление углов */
+  border: 1px solid var(--border);
+  color: #0a0d14; /* Явный темный цвет для текста */
+  transition: all 0.2s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px rgba(55, 93, 251, 0.1);
+}
+
+/* Стили для placeholder текста */
+input::placeholder {
+  color: #6b7280; /* Темно-серый цвет для placeholder */
+  opacity: 0.8;
+  font-size: 14px;
+}
+
+/* Стили для autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0a0d14 !important; /* Темный текст */
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important; /* Белый фон */
+  background-color: white !important; /* Дополнительно белый фон */
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Interview Typography Utilities */
+.interview-message-text {
+  font-family: 'Inter', sans-serif;
+  font-size: var(--text-interview-message);
+  line-height: var(--line-height-interview-message);
+  font-weight: 400;
+  letter-spacing: -0.27px;
+}
+
+.interview-question-button-text {
+  font-family: 'Inter', sans-serif;
+  font-size: var(--text-interview-button);
+  line-height: var(--line-height-interview-button);
+  font-weight: 500;
+  letter-spacing: -0.176px;
+}
+
+.text-interview-18 {
+  font-size: 18px;
+  line-height: 24px;
+  letter-spacing: -0.27px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+}
+
+.text-interview-16 {
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.176px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+}
+  
+  .interview-button {
+    background-color: var(--color-interview-accent);
+    color: white;
+    border-radius: 32px;
+    padding-left: 3rem;
+    padding-right: 3rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    height: 4rem;
+    font-size: 1.125rem;
+    font-weight: 500;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.27px;
+    line-height: 24px;
+  }
+  
+  .interview-button:hover {
+    background-color: var(--color-interview-accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(225, 99, 73, 0.2);
+  }
+  
+  .interview-button:active {
+    transform: translateY(0);
+  }
+  
+  .interview-button-secondary {
+    background-color: #e5e5ea;
+    color: #0a0d14;
+    border: 1px solid #e2e4e9;
+    border-radius: 32px;
+    padding-left: 3rem;
+    padding-right: 3rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    height: 4rem;
+    font-size: 1.125rem;
+    font-weight: 500;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.27px;
+    line-height: 24px;
+  }
+  
+  .interview-button-secondary:hover {
+    background-color: #ddd;
+  }
+  
+  .pulse-recording {
+    animation: pulse-recording 2s ease-in-out infinite;
+  }
+  
+  .answer-message-width {
+    width: 421px;
+    max-width: 421px;
+  }
+
+/* Улучшенный автоскролл контейнер */
+.custom-scroll-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  /* Оптимизированная прокрутка */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(225, 99, 73, 0.2) transparent;
+}
+
+.custom-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(225, 99, 73, 0.2);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.custom-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(225, 99, 73, 0.4);
+}
+
+/* Оптимизированные анимации появления */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Плавные переходы для кнопок */
+.btn-transition {
+  transition: all 0.2s ease-out;
+}
+
+.btn-transition:hover {
+  transform: translateY(-1px);
+}
+
+.btn-transition:active {
+  transform: translateY(0);
+}
+
+/* Исправленные стили для bottom controls */
+.bottom-controls-gradient {
+  background: linear-gradient(
+    to top,
+    rgba(233, 234, 226, 1) 0%,
+    rgba(233, 234, 226, 0.95) 50%,
+    rgba(233, 234, 226, 0.8) 80%,
+    rgba(233, 234, 226, 0) 100%
+  );
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Анимация пульсации для записи */
+@keyframes pulse-recording {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.95;
+  }
+}
+
+/* Оптимизация для мобильных устройств */
+@media (max-width: 768px) {
+  .animate-fade-in {
+    animation-duration: 0.3s;
+  }
+  
+  .custom-scroll-container {
+    scroll-behavior: smooth;
+  }
+
+  /* Уменьшенные отступы на мобильных */
+  .bottom-controls-mobile {
+    padding: 1rem;
+  }
+  
+  .bottom-controls-mobile .max-w-4xl {
+    max-width: 100%;
+  }
+  
+  /* Более узкий контейнер на мобильных */
+  .bottom-controls-gradient .max-w-2xl {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+  
+  /* Адаптивная типографика для интервью на мобильных */
+  .interview-message-text {
+    font-size: 16px;
+    line-height: 22px;
+  }
+  
+  .interview-question-button-text {
+    font-size: 14px;
+    line-height: 18px;
+  }
+  
+  .text-interview-18 {
+    font-size: 16px;
+    line-height: 22px;
+  }
+  
+  .text-interview-16 {
+    font-size: 14px;
+    line-height: 18px;
+  }
+  
+  .answer-message-width {
+    width: calc(100vw - 3rem);
+    max-width: calc(100vw - 3rem);
+  }
+}
+
+/* Глобальная оптимизация скролла */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(225, 99, 73, 0.15) transparent;
+}
+
+/* Поддержка prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  html, body {
+    scroll-behavior: auto;
+  }
+  
+  .animate-fade-in {
+    animation: none;
+  }
+  
+  .custom-scroll-container {
+    scroll-behavior: auto;
+  }
+  
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Дебаг стили для разработки */
+.debug-stage {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Интервью специфичные классы */
+.interview-button {
+  background-color: var(--interview-accent);
+  color: white;
+  border-radius: 32px;
+  padding: 12px 24px;
+  font-weight: 500;
+  transition: all 0.2s ease-out;
+  box-shadow: 0 4px 12px rgba(225, 99, 73, 0.3);
+}
+
+.interview-button:hover {
+  background-color: var(--interview-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(225, 99, 73, 0.4);
+}
+
+.interview-button-secondary {
+  background-color: white;
+  color: var(--interview-accent);
+  border: 2px solid var(--interview-accent);
+  border-radius: 32px;
+  padding: 12px 24px;
+  font-weight: 500;
+  transition: all 0.2s ease-out;
+}
+
+.interview-button-secondary:hover {
+  background-color: var(--interview-accent);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.bottom-controls-gradient {
+  background: linear-gradient(to top, 
+    rgba(255, 255, 255, 0.95) 0%, 
+    rgba(255, 255, 255, 0.8) 50%, 
+    rgba(255, 255, 255, 0) 100%);
+  backdrop-filter: blur(10px);
+}
+
+.custom-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(225, 99, 73, 0.2) transparent;
+}
+
+.custom-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(225, 99, 73, 0.2);
+  border-radius: 3px;
+}
+
+.custom-scroll-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(225, 99, 73, 0.4);
+}

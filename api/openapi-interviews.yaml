@@ -1,0 +1,1251 @@
+openapi: 3.0.0
+info:
+  title: HR Recruiter API — Interviews & Questions
+  version: 1.0.0
+  description: |
+    OpenAPI спецификация для управления собеседованиями и вопросами.
+    Самодостаточный файл для генерации и документации.
+  contact:
+    name: HR Recruiter Team
+    email: support@hr-recruiter.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local server
+  - url: https://api.hr-recruiter.com/api/v1
+    description: Production server
+tags:
+  - name: Interviews
+    description: Управление собеседованиями
+  - name: Questions
+    description: Управление вопросами для собеседований
+  - name: Voice Interviews
+    description: Управление голосовыми интервью
+paths:
+  # === INTERVIEWS ===
+  /interviews:
+    get:
+      operationId: listInterviews
+      tags: [Interviews]
+      summary: Получить список всех собеседований
+      description: Возвращает список всех собеседований в системе с возможностью фильтрации и пагинации
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: query
+          name: positionId
+          schema: { type: integer, format: int64 }
+          description: Фильтр по ID вакансии
+        - in: query
+          name: candidateId
+          schema: { type: integer, format: int64 }
+          description: Фильтр по ID кандидата
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/InterviewStatusEnum' }
+          description: Фильтр по статусу собеседования
+        - in: query
+          name: result
+          schema: { $ref: '#/components/schemas/InterviewResultEnum' }
+          description: Фильтр по результату собеседования
+        - in: query
+          name: page
+          schema: { type: integer, default: 0, minimum: 0 }
+          description: Номер страницы (начиная с 0)
+        - in: query
+          name: size
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+          description: Размер страницы
+        - in: query
+          name: sort
+          schema: { type: string, default: createdAt }
+          description: Поле для сортировки
+      responses:
+        '200':
+          description: Список собеседований
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewsPaginatedResponse'
+    post:
+      operationId: createInterview
+      tags: [Interviews]
+      summary: Создать собеседование по email кандидата
+      description: Ищет кандидата по email, при отсутствии создаёт нового кандидата и создаёт интервью со статусом NOT_STARTED
+      security: [{ AdminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewCreateRequest'
+      responses:
+        '201':
+          description: Интервью создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interview'
+        '400':
+          description: Некорректные параметры
+        '404':
+          description: Вакансия не найдена
+
+  /interviews/{id}:
+    get:
+      operationId: getInterview
+      tags: [Interviews]
+      summary: Получить информацию о собеседовании
+      description: Получить детальную информацию о собеседовании
+      security: [{ AdminAuth: [] }, { CandidateAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interview'
+        '404':
+          description: Собеседование не найдено
+
+  /interviews/{id}/answers:
+    get:
+      operationId: getInterviewAnswers
+      tags: [Interviews]
+      summary: Получить ответы собеседования
+      description: Получить все ответы кандидата на вопросы собеседования
+      security: [{ AdminAuth: [] }, { CandidateAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InterviewAnswer'
+        '404':
+          description: Собеседование не найдено
+
+  /interviews/{id}/start:
+    post:
+      operationId: startInterview
+      tags: [Interviews]
+      summary: Начать интервью
+      description: Начинает интервью с возможностью автоматического создания голосового агента
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewStartRequest'
+      responses:
+        '200':
+          description: Интервью успешно начато
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewStartResponse'
+        '400':
+          description: Некорректные параметры
+        '404':
+          description: Интервью не найдено
+        '500':
+          description: Ошибка создания агента
+
+  /interviews/{id}/finish:
+    post:
+      operationId: finishInterview
+      tags: [Interviews]
+      summary: Завершить интервью
+      description: Завершает интервью и рассчитывает итоговую оценку
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+      responses:
+        '200':
+          description: Интервью успешно завершено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interview'
+
+  /interviews/{id}/end:
+    post:
+      tags:
+        - Interviews
+      summary: Завершить интервью
+      operationId: endInterview
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID интервью
+      responses:
+        '200':
+          description: Интервью завершено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interview'
+        '404':
+          description: Интервью не найдено
+        '409':
+          description: Интервью уже завершено
+
+  # === VOICE INTERVIEW ENDPOINTS ===
+  /interviews/{id}/voice/start:
+    post:
+      tags:
+        - Voice Interviews
+      summary: Начать voice-интервью
+      description: Проверяет готовность всех вопросов и начинает voice-интервью без conversational AI
+      operationId: startVoiceInterview
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID интервью
+      responses:
+        '200':
+          description: Voice-интервью начато
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceInterviewStartResponse'
+        '404':
+          description: Интервью не найдено
+        '409':
+          description: Не все вопросы готовы к voice-интервью
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceInterviewNotReadyResponse'
+  /interviews/{id}/voice/next-question:
+    get:
+      tags:
+        - Voice Interviews
+      summary: Получить следующий вопрос для voice-интервью
+      description: Возвращает следующий неотвеченный вопрос с аудио и метаданными
+      operationId: getNextVoiceQuestion
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID интервью
+      responses:
+        '200':
+          description: Следующий вопрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceQuestionResponse'
+        '404':
+          description: Интервью не найдено
+        '409':
+          description: Все вопросы уже отвечены
+  /interviews/{id}/voice/answer:
+    post:
+      tags:
+        - Voice Interviews
+      summary: Отправить голосовой ответ
+      description: Принимает аудиофайл ответа кандидата, транскрибирует и сохраняет
+      operationId: submitVoiceAnswer
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID интервью
+        - in: query
+          name: questionId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вопроса
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: Аудиофайл ответа (MP3/WAV)
+      responses:
+        '200':
+          description: Ответ сохранен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceAnswerResponse'
+        '404':
+          description: Интервью или вопрос не найдены
+        '422':
+          description: Некорректный аудиофайл
+  /interviews/{id}/voice/end:
+    post:
+      tags:
+        - Voice Interviews
+      summary: Завершить voice-интервью
+      description: Завершает voice-интервью и сохраняет итоговую статистику
+      operationId: endVoiceInterview
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID интервью
+      responses:
+        '200':
+          description: Voice-интервью завершено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Interview'
+        '404':
+          description: Интервью не найдено
+  /interviews/{id}/answers/{questionId}/audio:
+    get:
+      tags:
+        - Voice Interviews
+      summary: Получить аудиофайл ответа кандидата
+      description: Возвращает MP3 файл с ответом кандидата для анализа
+      operationId: getAnswerAudio
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID интервью
+        - in: path
+          name: questionId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вопроса
+      responses:
+        '200':
+          description: Аудиофайл ответа
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Ответ не найден
+        '403':
+          description: Нет доступа к аудиофайлу
+
+  /positions/{positionId}/interviews:
+    get:
+      operationId: listPositionInterviews
+      tags: [Interviews]
+      summary: Список собеседований по вакансии
+      description: Получить список всех собеседований для указанной вакансии с возможностью фильтрации и пагинации. Вакансия и кандидат не включаются в ответ.
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вакансии
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/InterviewStatusEnum' }
+          description: Фильтр по статусу собеседования
+        - in: query
+          name: result
+          schema: { $ref: '#/components/schemas/InterviewResultEnum' }
+          description: Фильтр по результату собеседования
+        - in: query
+          name: page
+          schema: { type: integer, default: 0 }
+          description: Номер страницы
+        - in: query
+          name: size
+          schema: { type: integer, default: 20 }
+          description: Размер страницы
+        - in: query
+          name: sort
+          schema: { type: string, default: createdAt }
+          description: Поле для сортировки
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewsPaginatedResponse'
+        '404':
+          description: Вакансия не найдена
+
+  # === QUESTIONS ===
+  /questions:
+    get:
+      operationId: getAllQuestions
+      tags: [Questions]
+      summary: Получить список всех вопросов
+      description: Возвращает список всех вопросов в системе с пагинацией
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 0 }
+          description: Номер страницы
+        - in: query
+          name: size
+          schema: { type: integer, default: 20 }
+          description: Размер страницы
+        - in: query
+          name: sort
+          schema: { type: string, default: createdAt }
+          description: Поле для сортировки
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionsPaginatedResponse'
+
+  /questions/{id}:
+    get:
+      operationId: getQuestion
+      tags: [Questions]
+      summary: Получить вопрос по ID
+      description: Получить детальную информацию о вопросе
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '404':
+          description: Вопрос не найден
+
+    put:
+      operationId: updateQuestion
+      tags: [Questions]
+      summary: Обновить вопрос
+      description: Обновляет существующий вопрос
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionUpdateRequest'
+      responses:
+        '200':
+          description: Вопрос обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '404':
+          description: Вопрос не найден
+
+    delete:
+      operationId: deleteQuestion
+      tags: [Questions]
+      summary: Удалить вопрос по ID
+      description: Удаляет вопрос из системы
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      responses:
+        '204':
+          description: Вопрос успешно удален
+        '404':
+          description: Вопрос не найден
+
+  /positions/{positionId}/questions:
+    get:
+      operationId: listPositionQuestions
+      tags: [Questions]
+      summary: Список вопросов по вакансии
+      description: Получить список всех вопросов для указанной вакансии
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вакансии
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Question'
+        '404':
+          description: Вакансия не найдена
+
+    post:
+      operationId: createPositionQuestion
+      tags: [Questions]
+      summary: Добавить вопрос к вакансии
+      description: Создает новый вопрос для указанной вакансии
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вакансии
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionCreateRequest'
+      responses:
+        '201':
+          description: Вопрос добавлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '404':
+          description: Вакансия не найдена
+
+  /positions/{positionId}/questions-with-settings:
+    get:
+      operationId: getPositionQuestionsWithSettings
+      tags: [Questions]
+      summary: Получить вопросы с настройками проведения собеседования
+      description: Возвращает список вопросов для вакансии вместе с настройками проведения собеседования (время ответа, язык, сохранение аудио/видео и т.д.)
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вакансии
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionQuestionsResponse'
+        '404':
+          description: Вакансия не найдена
+
+components:
+  schemas:
+    # === INTERVIEWS ===
+    Interview:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID собеседования
+        positionId:
+          type: integer
+          format: int64
+          description: ID вакансии
+        candidateId:
+          type: integer
+          format: int64
+          description: ID кандидата
+        status:
+          $ref: '#/components/schemas/InterviewStatusEnum'
+        result:
+          $ref: '#/components/schemas/InterviewResultEnum'
+        score:
+          type: number
+          format: float
+          description: Общий балл собеседования
+        startedAt:
+          type: string
+          format: date-time
+          description: Время начала собеседования
+        finishedAt:
+          type: string
+          format: date-time
+          description: Время завершения собеседования
+        createdAt:
+          type: string
+          format: date-time
+          description: Время создания записи
+        updatedAt:
+          type: string
+          format: date-time
+          description: Время последнего обновления
+        voiceSessionId:
+          type: string
+          description: ID голосовой сессии
+        voiceAgentId:
+          type: string
+          description: ID агента в ElevenLabs
+        voiceEnabled:
+          type: boolean
+          description: Включено ли голосовое интервью
+        voiceLanguage:
+          type: string
+          description: Язык голосового интервью
+        voiceVoiceId:
+          type: string
+          description: ID голоса в ElevenLabs
+        voiceStartedAt:
+          type: string
+          format: date-time
+          description: Время начала голосовой сессии
+        voiceFinishedAt:
+          type: string
+          format: date-time
+          description: Время завершения голосовой сессии
+        voiceTotalDuration:
+          type: integer
+          description: Общая длительность голосового интервью в секундах
+      required:
+        - id
+        - positionId
+        - candidateId
+        - status
+        - createdAt
+        - updatedAt
+
+    InterviewAnswer:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID ответа
+        interviewId:
+          type: integer
+          format: int64
+          description: ID собеседования
+        questionId:
+          type: integer
+          format: int64
+          description: ID вопроса
+        answerText:
+          type: string
+          description: Текст ответа (транскрибация)
+        audioUrl:
+          type: string
+          description: URL аудио файла ответа
+        videoUrl:
+          type: string
+          description: URL видео файла ответа
+        rawTranscription:
+          type: string
+          description: Сырая транскрибация
+        formattedTranscription:
+          type: string
+          description: Отформатированный текст
+        transcript:
+          type: string
+          description: Транскрибированный текст (alias для formattedTranscription)
+        score:
+          type: number
+          format: float
+          description: Балл за ответ (0-100)
+        scoreJustification:
+          type: string
+          description: Обоснование оценки
+        feedback:
+          type: string
+          description: Обратная связь по ответу
+        durationSeconds:
+          type: integer
+          description: Длительность ответа в секундах
+        isCorrect:
+          type: boolean
+          description: Правильность ответа для вопросов типа CHOICE
+        voiceSessionId:
+          type: string
+          description: ID голосовой сессии
+        voiceConfidence:
+          type: number
+          format: float
+          description: Уверенность в распознавании речи (0.0-1.0)
+        voiceEmotion:
+          type: string
+          description: Определённая эмоция в голосе
+        voiceSpeakerId:
+          type: string
+          description: ID говорящего
+        voiceAudioUrl:
+          type: string
+          description: URL аудио файла ответа
+        voiceProcessingTime:
+          type: integer
+          format: int64
+          description: Время обработки в миллисекундах
+        voiceQualityScore:
+          type: number
+          format: float
+          description: Оценка качества аудио (0.0-1.0)
+        createdAt:
+          type: string
+          format: date-time
+          description: Время создания ответа
+      required:
+        - id
+        - interviewId
+        - questionId
+        - createdAt
+
+    InterviewStartRequest:
+      type: object
+      properties:
+        includeCandidateData:
+          type: boolean
+          description: Включить данные для кандидата
+          default: true
+        agentConfig:
+          type: object
+          description: Конфигурация агента
+        voiceSettings:
+          type: object
+          description: Настройки голосового интервью
+        autoCreateAgent:
+          type: boolean
+          description: Автоматически создать агента
+          default: true
+
+    InterviewStartResponse:
+      type: object
+      properties:
+        interviewId:
+          type: integer
+          format: int64
+          description: ID интервью
+        status:
+          $ref: '#/components/schemas/InterviewStartStatusEnum'
+          description: Статус запуска
+        message:
+          type: string
+          description: Дополнительная информация
+        agentId:
+          type: string
+          description: ID созданного агента (если voiceMode=true)
+        sessionId:
+          type: string
+          description: ID голосовой сессии (если voiceMode=true)
+        webhookUrl:
+          type: string
+          description: URL для webhook событий (если voiceMode=true)
+        signedUrl:
+          type: string
+          description: Signed URL для подключения к ElevenLabs WebSocket (если voiceMode=true)
+        candidateData:
+          type: object
+          description: Данные для кандидата (если includeCandidateData=true)
+
+    InterviewsPaginatedResponse:
+      type: object
+      description: Пагинированный список интервью
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Interview'
+          description: Список собеседований
+        totalElements:
+          type: integer
+          format: int64
+          description: Общее количество элементов
+        totalPages:
+          type: integer
+          format: int64
+          description: Общее количество страниц
+        number:
+          type: integer
+          format: int64
+          description: Номер текущей страницы
+        size:
+          type: integer
+          format: int64
+          description: Размер страницы
+      required:
+        - content
+        - totalElements
+        - totalPages
+        - number
+        - size
+
+    InterviewCreateRequest:
+      type: object
+      properties:
+        positionId:
+          type: integer
+          format: int64
+          description: ID вакансии
+        candidateEmail:
+          type: string
+          format: email
+          description: Email кандидата
+        firstName:
+          type: string
+          description: Имя кандидата (если новый)
+        lastName:
+          type: string
+          description: Фамилия кандидата (если новый)
+      required:
+        - positionId
+        - candidateEmail
+
+    # === QUESTIONS ===
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID вопроса
+        positionId:
+          type: integer
+          format: int64
+          description: ID вакансии
+        text:
+          type: string
+          description: Текст вопроса
+        type:
+          $ref: '#/components/schemas/QuestionTypeEnum'
+        order:
+          type: integer
+          description: Порядок вопроса
+        isRequired:
+          type: boolean
+          description: Обязательный ли вопрос
+        maxDuration:
+          type: integer
+          description: Максимальная длительность ответа в секундах
+        options:
+          type: array
+          items:
+            type: string
+          description: Варианты ответов для вопросов типа CHOICE
+        evaluationCriteria:
+          type: string
+          description: Критерии оценки ответа
+        createdAt:
+          type: string
+          format: date-time
+          description: Время создания
+        updatedAt:
+          type: string
+          format: date-time
+          description: Время последнего обновления
+      required:
+        - id
+        - positionId
+        - text
+        - type
+        - order
+        - isRequired
+        - createdAt
+        - updatedAt
+
+    QuestionCreateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Текст вопроса
+        type:
+          $ref: '#/components/schemas/QuestionTypeEnum'
+          description: Тип вопроса
+        order:
+          type: integer
+          description: Порядок вопроса
+        isRequired:
+          type: boolean
+          description: Обязательный ли вопрос
+          default: true
+        maxDuration:
+          type: integer
+          description: Максимальная длительность ответа в секундах
+        options:
+          type: array
+          items:
+            type: string
+          description: Варианты ответов для вопросов типа CHOICE
+        evaluationCriteria:
+          type: string
+          description: Критерии оценки ответа
+      required:
+        - text
+        - type
+        - order
+
+    QuestionUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/BaseQuestionFields'
+
+    BaseQuestionFields:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Текст вопроса
+        type:
+          $ref: '#/components/schemas/QuestionTypeEnum'
+          description: Тип вопроса
+        order:
+          type: integer
+          description: Порядок вопроса
+        isRequired:
+          type: boolean
+          description: Обязательный ли вопрос
+        maxDuration:
+          type: integer
+          description: Максимальная длительность ответа в секундах
+        options:
+          type: array
+          items:
+            type: string
+          description: Варианты ответов для вопросов типа CHOICE
+        evaluationCriteria:
+          type: string
+          description: Критерии оценки ответа
+
+    QuestionsPaginatedResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+      description: Пагинированный список вопросов
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+
+    PositionQuestionsResponse:
+      type: object
+      description: Ответ с вопросами вакансии и настройками проведения собеседования
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+          description: Список вопросов для вакансии
+        interviewSettings:
+          type: object
+          description: Настройки проведения собеседования
+          properties:
+            answerTime:
+              type: integer
+              description: Время ответа на вопрос в секундах
+              example: 120
+            language:
+              type: string
+              description: Язык собеседования
+              example: ru
+            showOtherLang:
+              type: boolean
+              description: Показывать вопросы на других языках
+              example: false
+            saveAudio:
+              type: boolean
+              description: Сохранять аудио
+              example: true
+            saveVideo:
+              type: boolean
+              description: Сохранять видео
+              example: false
+            randomOrder:
+              type: boolean
+              description: Случайный порядок вопросов
+              example: false
+            questionType:
+              type: string
+              description: Тип вопросов
+              example: mixed
+            questionsCount:
+              type: integer
+              description: Количество вопросов
+              example: 10
+            checkType:
+              type: string
+              description: Тип проверки
+              example: ai
+            level:
+              type: string
+              description: Уровень позиции
+              example: middle
+      required:
+        - questions
+        - interviewSettings
+
+    # === ENUMS ===
+    InterviewStatusEnum:
+      type: string
+      enum:
+        - NOT_STARTED
+        - IN_PROGRESS
+        - FINISHED
+      description: Статус собеседования
+
+    InterviewResultEnum:
+      type: string
+      enum:
+        - SUCCESSFUL
+        - UNSUCCESSFUL
+        - ERROR
+      description: Результат собеседования
+
+    InterviewStartStatusEnum:
+      type: string
+      enum:
+        - STARTED
+        - AGENT_CREATED
+        - ERROR
+      description: Статус запуска интервью
+
+    QuestionTypeEnum:
+      type: string
+      enum:
+        - TEXT
+        - AUDIO
+        - VIDEO
+        - CHOICE
+      description: Тип вопроса
+
+    # === COMMON ===
+    PaginatedResponse:
+      type: object
+      description: Базовый класс для всех пагинированных ответов
+      properties:
+        content:
+          type: array
+          description: Список элементов на текущей странице
+          items:
+            type: object
+        totalElements:
+          type: integer
+          format: int64
+          description: Общее количество элементов
+          example: 150
+        totalPages:
+          type: integer
+          format: int64
+          description: Общее количество страниц
+          example: 15
+        number:
+          type: integer
+          format: int64
+          description: Номер текущей страницы (начиная с 0)
+          example: 0
+        size:
+          type: integer
+          format: int64
+          description: Размер страницы
+          example: 10
+      required:
+        - content
+        - totalElements
+        - totalPages
+        - number
+        - size
+
+    # === VOICE INTERVIEW SCHEMAS ===
+    VoiceInterviewStartResponse:
+      type: object
+      properties:
+        interviewId:
+          type: integer
+          format: int64
+          description: ID интервью
+        status:
+          type: string
+          enum: [STARTED]
+          description: Статус voice-интервью
+        totalQuestions:
+          type: integer
+          description: Общее количество вопросов
+        readyQuestions:
+          type: integer
+          description: Количество готовых вопросов
+        estimatedDuration:
+          type: integer
+          description: Ориентировочная длительность в минутах
+      required:
+        - interviewId
+        - status
+        - totalQuestions
+        - readyQuestions
+    VoiceInterviewNotReadyResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Описание ошибки
+        readyQuestions:
+          type: integer
+          description: Количество готовых вопросов
+        totalQuestions:
+          type: integer
+          description: Общее количество вопросов
+        missingQuestions:
+          type: array
+          items:
+            type: integer
+            format: int64
+          description: ID вопросов, требующих озвучки
+      required:
+        - error
+        - readyQuestions
+        - totalQuestions
+    VoiceQuestionResponse:
+      type: object
+      properties:
+        questionId:
+          type: integer
+          format: int64
+          description: ID вопроса
+        text:
+          type: string
+          description: Текст вопроса
+        audioUrl:
+          type: string
+          description: URL к аудиофайлу вопроса
+        questionNumber:
+          type: integer
+          description: Номер вопроса в интервью
+        totalQuestions:
+          type: integer
+          description: Общее количество вопросов
+        maxDuration:
+          type: integer
+          description: Максимальная длительность ответа в секундах
+        position:
+          type: string
+          description: Название позиции
+      required:
+        - questionId
+        - text
+        - audioUrl
+        - questionNumber
+        - totalQuestions
+        - maxDuration
+    VoiceAnswerResponse:
+      type: object
+      properties:
+        questionId:
+          type: integer
+          format: int64
+          description: ID вопроса
+        transcript:
+          type: string
+          description: Транскрибированный текст ответа
+        durationSec:
+          type: integer
+          description: Длительность ответа в секундах
+        confidence:
+          type: number
+          format: float
+          description: Уверенность в распознавании (0.0-1.0)
+        audioFilePath:
+          type: string
+          description: Путь к сохраненному аудиофайлу
+        savedAt:
+          type: string
+          format: date-time
+          description: Время сохранения ответа
+      required:
+        - questionId
+        - transcript
+        - durationSec
+        - confidence
+        - audioFilePath
+        - savedAt
+
+  securitySchemes:
+    AdminAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен для администраторов
+    CandidateAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен для кандидатов 

@@ -1,0 +1,185 @@
+
+
+
+
+provide please guide, I want start session on server, because it knows all properties, Then react component get response from my server and start speaking
+
+Let me help you create a guide based on the ElevenLabs documentation.
+
+Here's how to implement server-side session initialization with client-side conversation handling:
+
+Server Side (Node.js/Express example):
+
+app.get('/start-conversation', async (req, res) => {
+  try {
+    // 1. Get signed URL from ElevenLabs
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${process.env.AGENT_ID}`,
+      {
+        method: 'GET',
+        headers: {
+          // Keep API key on server side only
+          'xi-api-key': process.env.XI_API_KEY,
+        },
+      }
+    );
+    if (!response.ok) {
+      return res.status(500).send('Failed to get signed URL');
+    }
+    const body = await response.json();
+    res.send(body.signed_url);
+  } catch (error) {
+    res.status(500).send('Error initializing conversation');
+  }
+}); 
+
+Client Side (React component):
+
+import { useConversation } from '@elevenlabs/react';
+export default function ConversationComponent() {
+  const conversation = useConversation({
+    onConnect: () => console.log('Connected'),
+    onDisconnect: () => console.log('Disconnected'),
+    onMessage: (message) => console.log(message),
+    onError: (error) => console.error('Error:', error),
+  });
+  const startConversation = async () => {
+    try {
+      // 1. Get microphone permission
+      const hasPermission = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!hasPermission) {
+        alert('Microphone permission needed');
+        return;
+      }
+      // 2. Get signed URL from your server
+      const response = await fetch('/start-conversation');
+      const signedUrl = await response.text();
+      // 3. Start conversation with signed URL
+      await conversation.startSession({
+        signedUrl: signedUrl
+      });
+    } catch (error) {
+      console.error('Failed to start conversation:', error);
+    }
+  };
+  return (
+    <button onClick={startConversation}>
+      Start Conversation
+    </button>
+  );
+}
+
+Key Points:
+
+Server side:
+
+Keeps API key secure 
+1
+Handles authentication with ElevenLabs
+Returns signed URL to client
+Client side:
+
+Uses ElevenLabs React SDK 
+2
+Handles microphone permissions
+Manages WebSocket connection internally
+Handles real-time conversation
+Remember to:
+
+Never expose your API key on the client side
+Handle errors appropriately
+Check microphone permissions before starting
+Use proper CORS settings on your server
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/libraries/java-script
+2
+https://elevenlabs.io/docs/conversational-ai/libraries/react
+could i use somehow get signed url to handle my internal ids?
+
+Yes! You can include query parameters when getting a signed URL. Let me search for the specifics.
+
+Based on the documentation, when getting a signed URL, you can include additional query parameters that will be preserved in the WebSocket URL:
+
+Server Side:
+
+app.get('/start-conversation', async (req, res) => {
+  const internalId = req.query.internalId; // Your internal ID
+  const interviewId = req.query.interviewId; // Your interview ID
+  try {
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?` + 
+      `agent_id=${process.env.AGENT_ID}` +
+      `&internal_id=${internalId}` +  // Custom parameter
+      `&interview_id=${interviewId}`,  // Custom parameter
+      {
+        method: 'GET',
+        headers: {
+          'xi-api-key': process.env.XI_API_KEY,
+        },
+      }
+    );
+    if (!response.ok) {
+      return res.status(500).send('Failed to get signed URL');
+    }
+    const body = await response.json();
+    // The signed URL will preserve your custom parameters
+    res.send(body.signed_url);
+  } catch (error) {
+    res.status(500).send('Error initializing conversation');
+  }
+}); 
+
+Client Side:
+
+import { useConversation } from '@elevenlabs/react';
+export default function ConversationComponent() {
+  const conversation = useConversation({
+    onConnect: (wsUrl) => {
+      // You can parse your custom parameters from the WebSocket URL
+      const url = new URL(wsUrl);
+      const internalId = url.searchParams.get('internal_id');
+      const interviewId = url.searchParams.get('interview_id');
+      console.log('Connected with internal ID:', internalId);
+      console.log('Interview ID:', interviewId);
+    },
+  });
+  const startConversation = async () => {
+    try {
+      // Request signed URL with your custom parameters
+      const response = await fetch('/start-conversation?internalId=123&interviewId=456');
+      const signedUrl = await response.text();
+      await conversation.startSession({
+        signedUrl: signedUrl
+      });
+    } catch (error) {
+      console.error('Failed to start conversation:', error);
+    }
+  };
+  return (
+    <button onClick={startConversation}>
+      Start Conversation
+    </button>
+  );
+}
+
+Benefits of this approach:
+
+You can track conversations with your internal IDs 
+1
+Parameters are preserved throughout the WebSocket connection
+You can include any custom parameters needed for your application
+The parameters remain secure as they're signed along with the URL
+Important notes:
+
+Don't include sensitive information in URL parameters
+Keep parameter names and values URL-safe
+Consider using a prefix for your custom parameters to avoid conflicts
+The signed URL has an expiration time, so handle reconnection scenarios accordingly
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/libraries/web-sockets

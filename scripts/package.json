@@ -1,0 +1,32 @@
+{
+  "name": "elevenlabs-backend-proxy",
+  "version": "1.0.0",
+  "description": "Backend proxy for ElevenLabs API to secure API keys",
+  "main": "elevenlabs-backend-proxy.js",
+  "scripts": {
+    "start": "node elevenlabs-backend-proxy.js",
+    "dev": "nodemon elevenlabs-backend-proxy.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "elevenlabs",
+    "proxy",
+    "api",
+    "backend",
+    "security"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6",
+    "cors": "^2.8.5",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+} 

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "declaration": true,
+    "emitDeclarationOnly": false,
+    "outDir": "./node_modules/@generated",
+    "rootDir": "./generated-src/client",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "isolatedModules": false,
+    "removeComments": false,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "generated-src/client/**/*"
+  ]
+} 

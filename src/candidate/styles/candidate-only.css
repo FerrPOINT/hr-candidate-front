@@ -1,0 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Display:wght@500&display=swap');
+
+/* Candidate-only CSS - полностью изолирован от основного приложения */
+
+:root {
+  /* Typography */
+  --candidate-font-size: 14px;
+  --candidate-font-weight-medium: 500;
+  --candidate-font-weight-normal: 400;
+  
+  /* Typography scale */
+  --candidate-text-h1: 56px;
+  --candidate-text-h2: 48px; 
+  --candidate-text-h3: 40px;
+  --candidate-text-h4: 32px;
+  --candidate-text-h5: 24px;
+  --candidate-text-base: 16px;
+  --candidate-text-sm: 14px;
+  
+  /* Interview specific typography */
+  --candidate-text-interview-message: 18px;
+  --candidate-text-interview-button: 16px;
+  --candidate-line-height-interview-message: 24px;
+  --candidate-line-height-interview-button: 20px;
+  
+  /* Core colors */
+  --candidate-background: rgba(245, 246, 241, 1);
+  --candidate-foreground: rgba(10, 13, 20, 1);
+  --candidate-card: rgba(245, 246, 241, 1);
+  --candidate-card-foreground: rgba(10, 13, 20, 1);
+  --candidate-popover: rgba(245, 246, 241, 1);
+  --candidate-popover-foreground: rgba(10, 13, 20, 1);
+  
+  /* Interactive colors */
+  --candidate-primary: rgba(55, 93, 251, 1);
+  --candidate-primary-foreground: rgba(255, 255, 255, 1);
+  --candidate-secondary: rgba(246, 248, 250, 1);
+  --candidate-secondary-foreground: rgba(82, 88, 102, 1);
+  --candidate-muted: rgba(226, 228, 233, 1);
+  --candidate-muted-foreground: rgba(134, 140, 152, 1);
+  --candidate-accent: rgba(53, 185, 233, 1);
+  --candidate-accent-foreground: rgba(255, 255, 255, 1);
+  --candidate-destructive: rgba(223, 28, 65, 1);
+  --candidate-destructive-foreground: rgba(255, 255, 255, 1);
+  
+  /* Form elements */
+  --candidate-border: rgba(226, 228, 233, 1);
+  --candidate-input: rgba(245, 246, 241, 1);
+  --candidate-input-background: rgba(245, 246, 241, 1);
+  --candidate-ring: rgba(55, 93, 251, 1);
+  
+  /* Interview specific colors */
+  --candidate-interview-bg: rgba(233, 234, 226, 1);
+  --candidate-interview-substrate: rgba(245, 246, 241, 1);
+  --candidate-interview-accent: rgba(225, 99, 73, 1);
+  --candidate-interview-accent-hover: rgba(213, 90, 66, 1);
+  --candidate-interview-accent-50: rgba(225, 99, 73, 0.5);
+  --candidate-interview-accent-40: rgba(225, 99, 73, 0.4);
+  --candidate-interview-accent-35: rgba(225, 99, 73, 0.35);
+  --candidate-interview-accent-30: rgba(225, 99, 73, 0.3);
+  --candidate-interview-accent-25: rgba(225, 99, 73, 0.25);
+  --candidate-interview-accent-18: rgba(225, 99, 73, 0.18);
+  --candidate-interview-accent-55: rgba(225, 99, 73, 0.55);
+  
+  /* Layout */
+  --candidate-radius: 10px;
+  --candidate-radius-button: 10px;
+  --candidate-radius-card: 12px;
+  --candidate-radius-tooltip: 4px;
+  
+  /* Shadows */
+  --candidate-elevation-sm: 0px 1px 2px 0px rgba(228, 229, 231, 0.24);
+}
+
+/* Восстанавливаем оригинальные стили для candidate UI */
+.candidate-app {
+  background-color: #e9eae2; /* Оригинальный цвет из AuthForm */
+  color: var(--candidate-foreground);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Восстанавливаем правильные стили для форм */
+.candidate-app input {
+  height: 48px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  border-radius: 8px;
+  border: 1px solid var(--candidate-border);
+  background-color: transparent; /* Как в оригинале */
+  color: #0a0d14; /* Оригинальный цвет текста */
+  transition: all 0.2s ease;
+}
+
+.candidate-app input::placeholder {
+  color: #6b7280; /* Оригинальный цвет placeholder */
+  opacity: 0.7;
+  font-size: 14px;
+}
+
+.candidate-app input:-webkit-autofill {
+  color: #0a0d14 !important;
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Стили для кнопок */
+.candidate-app .interview-button {
+  background-color: var(--candidate-interview-accent);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 16px 32px;
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.candidate-app .interview-button:hover {
+  background-color: var(--candidate-interview-accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.candidate-app .interview-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Восстанавливаем оригинальные цвета для Tailwind классов */
+.candidate-app .bg-interview-substrate {
+  background-color: #f5f6f1 !important; /* Оригинальный цвет */
+}
+
+.candidate-app .bg-interview-bg {
+  background-color: #e9eae2 !important; /* Оригинальный цвет */
+}
+
+.candidate-app .bg-interview-accent {
+  background-color: #e16349 !important; /* Оригинальный цвет */
+}
+
+.candidate-app .hover\:bg-interview-accent-hover:hover {
+  background-color: #d55a42 !important; /* Оригинальный цвет */
+}
+
+/* Стили для текста */
+.candidate-app .text-foreground {
+  color: #0a0d14 !important; /* Оригинальный цвет */
+}
+
+.candidate-app .text-muted-foreground {
+  color: #6b7280 !important; /* Оригинальный цвет */
+}
+
+.candidate-app .text-secondary-foreground {
+  color: #525866 !important; /* Оригинальный цвет */
+}
+
+/* Стили для границ */
+.candidate-app .border-border {
+  border-color: #e2e4e9 !important; /* Оригинальный цвет */
+}
+
+.candidate-app .border-muted {
+  border-color: #e2e4e9 !important; /* Оригинальный цвет */
+}
+
+/* Стили для фонов */
+.candidate-app .bg-muted {
+  background-color: #e2e4e9 !important; /* Оригинальный цвет */
+}
+
+.candidate-app .bg-muted\/30 {
+  background-color: rgba(226, 228, 233, 0.3) !important;
+}
+
+.candidate-app .bg-secondary {
+  background-color: #f6f8fa !important; /* Оригинальный цвет */
+}
+
+.candidate-app .hover\:bg-secondary:hover {
+  background-color: #f6f8fa !important; /* Оригинальный цвет */
+}
+
+.candidate-app .hover\:bg-muted-foreground\/30:hover {
+  background-color: rgba(134, 140, 152, 0.3) !important;
+}
+
+/* Стили для hover эффектов */
+.candidate-app .hover\:border-muted:hover {
+  border-color: #e2e4e9 !important; /* Оригинальный цвет */
+}
+
+.candidate-app .hover\:border-muted-foreground:hover {
+  border-color: #868c98 !important; /* Оригинальный цвет */
+}
+
+/* Стили для кнопок */
+.candidate-app .hover\:text-secondary-foreground:hover {
+  color: #525866 !important; /* Оригинальный цвет */
+} 

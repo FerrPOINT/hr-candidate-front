@@ -1,0 +1,416 @@
+"В React SDK v0.2.2 (@elevenlabs/react), после успешного подключения через useConversation и startSe
+
+I apologize, but I notice you're asking a question in Russian. Let me respond in English since the documentation is in English.
+
+Based on your partial question about React SDK v0.2.2 (@elevenlabs/react) and useConversation/startSession, let me help with information about how these components work:
+
+The useConversation hook is used to manage connection and audio for ElevenLabs Conversational AI
+1
+. Here's how to use it:
+
+Initialize the conversation:
+import { useConversation } from '@elevenlabs/react';
+const conversation = useConversation();
+
+To start a session, you'll need to call startSession with either:
+agentId (for public agents)
+signedUrl (for WebSocket connections)
+conversationToken (for WebRTC connections)
+For example:
+
+const conversationId = await conversation.startSession({
+  agentId: '<your-agent-id>',
+  connectionType: 'webrtc' // either "webrtc" or "websocket"
+});
+
+The hook provides status information you can monitor:
+
+const { status } = useConversation(); // "connected" or "disconnected"
+const { isSpeaking } = useConversation(); // boolean
+
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/libraries/react
+"В React SDK v0.2.2 (@elevenlabs/react), после успешного подключения через useConversation и startSession({ signedUrl }), объект conversation не имеет метода sendMessage. Какие методы доступны для отправки сообщений в голосовую беседу? Нужно ли использовать другой подход для отправки contextual_update?"
+
+
+у меня уже есть signed url
+
+Let me help explain the available methods for sending messages with the React SDK after establishing a connection.
+
+Based on the documentation, the useConversation hook primarily focuses on voice-based interaction rather than direct message sending
+1
+. The main methods available through the conversation object are:
+
+startSession - for initiating the conversation
+endSession - for ending the conversation
+setVolume - for adjusting output volume
+For sending contextual updates or messages, the recommended approach is to handle this through the initial session configuration when calling startSession. You can use:
+
+Dynamic variables
+Client tools
+The conversation configuration parameters
+For example:
+
+const conversation = useConversation({
+  onConnect: () => console.log('Connected'),
+  onDisconnect: () => console.log('Disconnected'),
+  onMessage: (message) => console.log(message),
+  onError: (error) => console.error('Error:', error)
+});
+await conversation.startSession({
+  signedUrl: yourSignedUrl,
+  // Add any dynamic variables or context here
+  dynamicVariables: {
+    // your variables
+  },
+  clientTools: {
+    // your tools
+  }
+});
+
+Unfortunately, I can't find documentation about a direct sendMessage method or sending contextual_update after the session has started. You may need to restart the session with updated context if you need to send new contextual information.
+
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/libraries/react
+I added tools desription to the agent prmpt is it may be correct?
+
+Let me search for information about tools configuration in agent prompts.
+
+Based on the documentation, if you're adding tool descriptions to the agent prompt, you'll need to be aware of some important changes:
+
+The old prompt.tools field is being deprecated and will be completely removed by July 23, 2025
+1
+.
+
+Instead of adding tool descriptions directly in the prompt, you should:
+
+Use prompt.tool_ids array for client or server tools, referencing their IDs
+Use prompt.built_in_tools for system tools (like end_call, language_detection)
+Here's the correct structure:
+
+{
+  "conversation_config": {
+    "agent": {
+      "prompt": {
+        "tool_ids": ["tool_123456789abcdef0"], // For client/server tools
+        "built_in_tools": {
+          "end_call": {
+            "name": "end_call",
+            "description": "",
+            "response_timeout_secs": 20,
+            "type": "system",
+            "params": {
+              "system_tool_type": "end_call"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+Important notes:
+
+You cannot mix both tool_ids and legacy tools fields in one request
+System tools must be specified in built_in_tools, not in tool_ids
+To get tool IDs, use the toolbox endpoint: GET /v1/convai/tools
+Was this response helpful?
+Yes
+No
+1
+Agent tools deprecation
+https://elevenlabs.io/docs/conversational-ai/customization/tools/agent-tools-deprecation
+can I add tools to the elabs throught method like
+/v1/convai/conversation/get-signed-url?agent_id=
+
+
+I need manage all data on server, to not provide such data to front
+
+Let me search for information about adding tools through the signed URL endpoint.
+
+After searching the documentation, I don't see any way to add or modify tools through the /v1/convai/conversation/get-signed-url endpoint. The endpoint is only used to obtain a signed WebSocket URL for establishing a secure connection
+1
+.
+
+The signed URL endpoint appears to only accept these parameters:
+
+agent_id
+xi-api-key (as header)
+For managing tools and other agent configurations securely on the server side, you have two main approaches:
+
+Configure the tools through the ElevenLabs UI beforehand
+Use the separate tools configuration endpoints to set up your agent's tools before getting the signed URL
+If you need to keep tool configuration secure and server-side only, you should:
+
+Set up the tools configuration through your backend
+Then use the signed URL endpoint just for connection establishment
+The front end would only receive the signed URL, without access to the tool configurations
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/libraries/swift
+do elevenlabs have endpoint to manage tools and webhook end url?
+
+Let me search for endpoints related to managing tools and webhooks.
+
+Based on the documentation, here's what I found regarding tools and webhook management:
+
+For Tools Management:
+There is a dedicated toolbox endpoint for managing tools
+1
+:
+POST | GET | PATCH | DELETE  https://api.elevenlabs.io/v1/convai/tools
+
+You can use it to:
+Create a tool and get its ID
+Update tool requirements
+Delete tools when no longer needed
+For Webhook Configuration:
+Post-call webhooks can be enabled through:
+Workspace level: Via Conversational AI settings page (https://elevenlabs.io/app/conversational-ai/settings)
+2
+Agent level: Through individual agent webhook overrides
+You can configure:
+Webhook URL endpoint
+Authentication via HMAC signatures
+Audio data delivery settings
+Webhook settings support:
+IP whitelisting for security
+Different webhook types (transcription and audio)
+Custom authentication and security measures
+Note that:
+
+You cannot add tools directly through the signed URL endpoint
+3
+Tools configuration should be done before getting the signed URL
+Post-call webhook settings are primarily managed through the UI settings page rather than an API endpoint
+Was this response helpful?
+Yes
+No
+1
+Agent tools deprecation
+https://elevenlabs.io/docs/conversational-ai/customization/tools/agent-tools-deprecation
+2
+Post-call webhooks
+https://elevenlabs.io/docs/conversational-ai/workflows/post-call-webhooks
+3
+System tools
+https://elevenlabs.io/docs/conversational-ai/customization/tools/system-tools
+how I can use values in tools from contextual_update
+
+Let me search for information about using contextual updates with tools.
+
+From the documentation, you can send contextual updates through client-to-server events that can provide additional context during conversations
+1
+. Here's how it works:
+
+// Contextual update event structure
+{
+  "type": "contextual_update",
+  "text": "User appears to be looking at pricing page"
+}
+
+You can send contextual updates in several ways:
+
+Using WebSocket:
+function sendContextUpdate(information) {
+  websocket.send(
+    JSON.stringify({
+      type: 'contextual_update',
+      text: information,
+    })
+  );
+}
+// Usage examples
+sendContextUpdate('Customer status: Premium tier');
+sendContextUpdate('User navigated to Help section');
+sendContextUpdate('Shopping cart contains 3 items');
+
+Key characteristics of contextual updates:
+
+Updates are incorporated as background information in the conversation
+Does not interrupt the current conversation flow
+Useful for sending UI state, user actions, or environmental data
+Best practices:
+
+Send relevant but concise contextual information
+Avoid overwhelming the LLM with too many updates
+Focus on information that impacts the conversation flow
+Consider grouping multiple contextual updates into a single update instead of sending every small change separately
+The contextual information you send becomes part of the conversation context and can be used by any tools configured for the agent. The LLM will have access to this context when deciding how and when to use the tools.
+
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/customization/events/client-to-server-events
+yes I asked when I adding tools I want to handle specific ids from my app, how can I do this?
+
+Let me search for information about handling custom IDs or values within tools configuration.
+
+Unfortunately, I can't find specific documentation about passing custom application IDs through the tools configuration or contextual updates. While ElevenLabs provides endpoints for managing tools
+1
+:
+
+POST | GET | PATCH | DELETE  https://api.elevenlabs.io/v1/convai/tools
+
+The documentation doesn't show how to pass custom application-specific IDs through the tool system.
+
+You might have a few potential workarounds:
+
+Store your app-specific IDs in the tool description or name when creating them through the tools endpoint
+Include your IDs as part of the tool parameters structure
+Send the IDs as part of contextual updates when needed
+However, without seeing the full API schema for tool creation and management, I cannot make specific recommendations about the best approach.
+
+I suggest:
+
+Contact ElevenLabs support for guidance on handling application-specific IDs within tools
+Or experiment with the tools API to see if it accepts custom fields in the tool definition
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/customization/tools/agent-tools-deprecation
+It can't provide my ids throught tool calling, or it always do static requests?
+
+Let me search the documentation specifically about dynamic values in tool calls.
+
+From the documentation, I don't see clear information about passing dynamic IDs through tool calls. The tools configuration appears to be more static in nature, where you define the tool structure and endpoints ahead of time
+1
+.
+
+Here's what we know:
+
+Tools are configured with predefined parameters and endpoints
+The new tools system uses tool_ids for referencing specific tools:
+{
+  "conversation_config": {
+    "agent": {
+      "prompt": {
+        "tool_ids": ["tool_123456789abcdef0"]
+      }
+    }
+  }
+}
+
+However, the documentation doesn't explicitly state whether:
+
+Tool calls can use dynamic values from the conversation context
+You can modify tool parameters during runtime
+There's a way to pass variable IDs through tool executions
+I recommend:
+
+Contact ElevenLabs support to clarify if dynamic values in tool calls are possible
+Or consider creating separate tools for different ID ranges if dynamic values aren't supported
+This appears to be a limitation in the documentation, and we can't definitively say whether dynamic IDs in tool calls are supported or not.
+
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/customization/tools/agent-tools-deprecation
+I cant create infinity tools, do you have information how to handle my ids throught conversation ai
+
+Let me search for information about handling dynamic data through conversation AI.
+
+After searching the documentation, there are a few ways to handle dynamic data within the conversation:
+
+Through Client Tools:
+// Example from Swift SDK
+clientTools.register("generate_joke") { parameters async throws -> String? in
+    // Parameters is a [String: Any] dictionary
+    // You can access dynamic values here
+    guard let someId = parameters["id"] as? String else {
+        throw ElevenLabsSDK.ClientToolError.invalidParameters
+    }
+    // Handle your ID logic here
+    return response
+} [^1]
+
+Using Dynamic Variables during session start:
+await conversation.startSession({
+  signedUrl: yourSignedUrl,
+  dynamicVariables: {
+    // your variables/IDs can go here
+    userId: "123",
+    contextData: {...}
+  }
+}) [^1]
+
+Through Contextual Updates during the conversation:
+{
+  "type": "contextual_update",
+  "text": "Current user ID: USER_123" // Include your dynamic data here
+} [^1]
+
+Best Practice Approach:
+
+Register a single generic tool that can handle different IDs
+Pass the specific IDs either through:
+Contextual updates during conversation
+Dynamic variables at session start
+Have your tool implementation handle the ID routing on your backend
+This way, instead of creating multiple tools for different IDs, you create one tool that can handle various IDs passed through the conversation context.
+
+
+1
+
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/libraries/swift
+so how can I know which speak it was? I mean I have alot of sessions, how i will know which talk called my tools and hooks?
+
+Let me search for information about session and call identification in ElevenLabs.
+
+From the documentation, there are several ways to identify specific conversations and tool calls:
+
+Through Post-Call Webhooks:
+Each webhook call includes:
+conversation_id - unique identifier for the conversation
+session_id - unique identifier for the specific session
+These can be used to track which conversation triggered the webhook
+1
+Example webhook payload:
+
+{
+  "conversation_id": "conv_abc123...",
+  "session_id": "session_xyz789...",
+  "agent_id": "agent_def456...",
+  "timestamp": "2023-..."
+}
+
+For Tool Calls:
+Tools receive conversation context including:
+user_id if authenticated
+session_id for the current session
+Other metadata about the conversation
+2
+For Session Management:
+When starting a session, you receive a unique conversationId:
+const conversationId = await conversation.startSession({
+  signedUrl: yourSignedUrl
+});
+
+This ID can be used to track the specific conversation throughout its lifecycle
+Best Practices:
+
+Store the conversation_id and session_id when starting conversations
+Use these IDs to correlate tool calls and webhook responses with specific conversations
+Include these IDs in your logging and tracking systems
+Was this response helpful?
+Yes
+No
+1
+https://elevenlabs.io/docs/conversational-ai/workflows/post-call-webhooks
+2
+https://elevenlabs.io/docs/conversational-ai/libraries/react

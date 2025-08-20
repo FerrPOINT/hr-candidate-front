@@ -1,0 +1,501 @@
+openapi: 3.0.0
+info:
+  title: HR Recruiter API — Voice
+  version: 1.0.0
+  description: |
+    OpenAPI спецификация для голосовых операций (озвучка вопросов, медиадоступ, voice-интервью без conversational AI).
+    Самодостаточный файл для генерации и документации.
+  contact:
+    name: HR Recruiter Team
+    email: support@hr-recruiter.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local server
+  - url: https://api.hr-recruiter.com/api/v1
+    description: Production server
+tags:
+  - name: Voice
+    description: Голосовые операции
+  - name: Media
+    description: Доступ к медиафайлам
+paths:
+  /questions/{questionId}/voice:
+    get:
+      operationId: getQuestionVoice
+      tags: [Voice]
+      summary: Получить метаданные озвучки вопроса
+      description: Возвращает статус озвучки, путь к файлу и другие метаданные для конкретного вопроса
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: questionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      responses:
+        '200':
+          description: Метаданные озвучки вопроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionVoiceSynthesisResponse'
+        '404':
+          description: Вопрос не найден
+    put:
+      operationId: synthesizeQuestionVoice
+      tags: [Voice]
+      summary: Озвучить вопрос
+      description: Синтезирует аудио для вопроса с использованием настроек сервера. Автоматически определяет необходимость переозвучки
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: questionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionVoiceSynthesisRequest'
+      responses:
+        '200':
+          description: Результат синтеза
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionVoiceSynthesisResponse'
+        '404':
+          description: Вопрос не найден
+        '422':
+          description: Невозможно озвучить (пустой текст)
+    delete:
+      operationId: deleteQuestionVoice
+      tags: [Voice]
+      summary: Удалить аудиофайл вопроса
+      description: Удаляет аудиофайл с диска и сбрасывает статус озвучки в NONE
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: questionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      responses:
+        '204':
+          description: Аудиофайл удалён
+        '404':
+          description: Вопрос не найден
+  /questions/{questionId}/voice/audio:
+    get:
+      operationId: streamQuestionVoiceAudio
+      tags: [Voice]
+      summary: Получить аудиофайл вопроса
+      description: Возвращает MP3 файл с озвучкой вопроса для воспроизведения
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: questionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      responses:
+        '200':
+          description: Аудиофайл вопроса
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Аудиофайл не найден
+        '403':
+          description: Нет доступа к аудиофайлу
+
+  # === MEDIA ACCESS ENDPOINTS ===
+  /media/questions/{questionId}.mp3:
+    get:
+      operationId: getQuestionAudioMedia
+      tags: [Media]
+      summary: Получить аудиофайл вопроса через медиа-сервер
+      description: Прямой доступ к аудиофайлу вопроса через медиа-сервер
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: questionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      responses:
+        '200':
+          description: Аудиофайл вопроса
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Аудиофайл не найден
+        '403':
+          description: Нет доступа к аудиофайлу
+  /media/positions/{positionId}/interviews/{interviewId}/answers/{questionId}.mp3:
+    get:
+      operationId: getAnswerAudioMedia
+      tags: [Media]
+      summary: Получить аудиофайл ответа кандидата
+      description: Прямой доступ к аудиофайлу ответа кандидата через медиа-сервер
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID позиции
+        - in: path
+          name: interviewId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID интервью
+        - in: path
+          name: questionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      responses:
+        '200':
+          description: Аудиофайл ответа
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Аудиофайл не найден
+        '403':
+          description: Нет доступа к аудиофайлу
+  /positions/{positionId}/questions/voice:
+    get:
+      operationId: getPositionQuestionsVoiceStatus
+      tags: [Voice]
+      summary: Статус озвучки всех вопросов позиции
+      description: Возвращает сводку по статусам озвучки всех вопросов позиции с детализацией
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID позиции
+      responses:
+        '200':
+          description: Статусы озвучки вопросов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionVoiceStatusResponse'
+        '404':
+          description: Позиция не найдена
+    post:
+      operationId: synthesizeAllPositionQuestionsVoice
+      tags: [Voice]
+      summary: Озвучить все вопросы позиции
+      description: Запускает асинхронную озвучку всех вопросов позиции. Автоматически определяет какие вопросы требуют озвучки
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID позиции
+      responses:
+        '202':
+          description: Задача принята в обработку
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  positionId: { type: integer, format: int64 }
+                  accepted: { type: boolean }
+                  total: { type: integer }
+        '404':
+          description: Позиция не найдена
+  /positions/{positionId}/questions/voice/changed:
+    post:
+      operationId: synthesizeChangedPositionQuestionsVoice
+      tags: [Voice]
+      summary: Озвучить изменённые вопросы позиции
+      description: Запускает озвучку только тех вопросов, которые изменились (hash mismatch) или имеют статус ERROR
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID позиции
+      responses:
+        '202':
+          description: Задача принята в обработку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SynthesizeChangedQuestionsVoice202Response'
+        '404':
+          description: Позиция не найдена
+  /interviews/{id}/voice/start:
+    post:
+      operationId: startVoiceInterview
+      tags: [Voice]
+      summary: Начать voice-интервью
+      description: Проверяет готовность всех вопросов и начинает voice-интервью
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID интервью
+      responses:
+        '200':
+          description: Интервью начато
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interviewId: { type: integer, format: int64 }
+                  status: { type: string, enum: [STARTED] }
+                  totalQuestions: { type: integer }
+                  readyQuestions: { type: integer }
+        '409':
+          description: Не все вопросы готовы
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  readyQuestions: { type: integer }
+                  totalQuestions: { type: integer }
+        '404':
+          description: Интервью не найдено
+  /interviews/{id}/voice/next-question:
+    get:
+      operationId: getNextVoiceQuestion
+      tags: [Voice]
+      summary: Получить следующий вопрос
+      description: Возвращает следующий вопрос для voice-интервью с метаданными аудио
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID интервью
+      responses:
+        '200':
+          description: Следующий вопрос
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questionId: { type: integer, format: int64 }
+                  text: { type: string }
+                  audioUrl: { type: string }
+                  questionNumber: { type: integer }
+                  totalQuestions: { type: integer }
+                  maxDuration: { type: integer }
+        '404':
+          description: Интервью не найдено или вопросы закончились
+  /interviews/{id}/voice/answer:
+    post:
+      operationId: submitVoiceAnswer
+      tags: [Voice]
+      summary: Отправить голосовой ответ
+      description: Принимает аудио ответ кандидата и выполняет транскрибацию
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID интервью
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: Аудиофайл ответа (MP3/WAV)
+                questionId:
+                  type: integer
+                  format: int64
+                  description: ID вопроса
+      responses:
+        '200':
+          description: Ответ принят и транскрибирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questionId: { type: integer, format: int64 }
+                  transcript: { type: string }
+                  durationSec: { type: integer }
+                  confidence: { type: number }
+                  audioFilePath: { type: string, description: "Путь к сохраненному аудиофайлу ответа" }
+        '400':
+          description: Некорректный аудиофайл
+        '404':
+          description: Интервью или вопрос не найдены
+  /interviews/{interviewId}/answers/{questionId}/audio:
+    get:
+      operationId: getCandidateAnswerAudio
+      tags: [Voice]
+      summary: Получить аудиофайл ответа кандидата
+      description: Возвращает MP3 файл с ответом кандидата для прослушивания и анализа
+      security: [{ AdminAuth: [] }]
+      parameters:
+        - in: path
+          name: interviewId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID интервью
+        - in: path
+          name: questionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+      responses:
+        '200':
+          description: Аудиофайл ответа кандидата
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Аудиофайл ответа не найден
+        '403':
+          description: Нет доступа к аудиофайлу ответа
+components:
+  schemas:
+    VoiceStatusEnum:
+      type: string
+      description: Статус озвучки вопроса. NONE - не озвучен, PENDING - в процессе, READY - готов, ERROR - ошибка
+      enum: [ NONE, PENDING, READY, ERROR ]
+    QuestionVoiceStatusItem:
+      type: object
+      description: Статус озвучки конкретного вопроса
+      properties:
+        questionId: 
+          type: integer
+          format: int64
+          description: ID вопроса
+        status: 
+          $ref: '#/components/schemas/VoiceStatusEnum'
+          description: Статус озвучки
+        errorMessage: 
+          type: string
+          description: Сообщение об ошибке (если status=ERROR)
+    PositionVoiceStatusResponse:
+      type: object
+      description: Сводка по статусам озвучки всех вопросов позиции
+      properties:
+        positionId: 
+          type: integer
+          format: int64
+          description: ID позиции
+        total: 
+          type: integer
+          description: Общее количество вопросов
+        ready: 
+          type: integer
+          description: Количество готовых вопросов
+        pending: 
+          type: integer
+          description: Количество вопросов в обработке
+        error: 
+          type: integer
+          description: Количество вопросов с ошибками
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/QuestionVoiceStatusItem' }
+          description: Детальный список статусов
+      required: [ positionId, total ]
+    QuestionVoiceSynthesisRequest:
+      type: object
+      description: Параметры для синтеза голоса. Используйте forceRegenerate=true для принудительной переозвучки
+      properties:
+        forceRegenerate: 
+          type: boolean
+          description: Принудительно переозвучить даже если файл уже существует
+          example: false
+    QuestionVoiceSynthesisResponse:
+      type: object
+      description: Результат синтеза голоса для вопроса. Используйте status для отображения индикатора готовности
+      properties:
+        questionId: 
+          type: integer
+          format: int64
+          description: ID вопроса
+        status: 
+          $ref: '#/components/schemas/VoiceStatusEnum'
+          description: Статус озвучки
+        durationSec: 
+          type: integer
+          description: Длительность аудио в секундах
+          example: 4
+      required: [ questionId, status ]
+    SynthesizeAllPositionQuestionsVoice202Response:
+      type: object
+      description: Ответ на запрос массовой озвучки всех вопросов позиции
+      properties:
+        positionId: 
+          type: integer
+          format: int64
+          description: ID позиции
+        accepted: 
+          type: boolean
+          description: Задача принята в обработку
+        total: 
+          type: integer
+          description: Общее количество вопросов в позиции
+      required: [ positionId, accepted ]
+    SynthesizeChangedQuestionsVoice202Response:
+      type: object
+      description: Ответ на запрос озвучки изменённых вопросов позиции
+      properties:
+        positionId: 
+          type: integer
+          format: int64
+          description: ID позиции
+        accepted: 
+          type: boolean
+          description: Задача принята в обработку
+        total: 
+          type: integer
+          description: Общее количество вопросов в позиции
+        changed: 
+          type: integer
+          description: Количество изменённых вопросов, требующих озвучки
+      required: [ positionId, accepted, changed ]
+
+  securitySchemes:
+    CandidateAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    AdminAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT 
