@@ -1,7 +1,8 @@
+import { Configuration } from '../../../generated-src/client/configuration';
 import { CandidatesApi } from '../../../generated-src/client/apis/candidates-api';
 import { VoiceInterviewsApi } from '../../../generated-src/client/apis/voice-interviews-api';
 import { InterviewsApi } from '../../../generated-src/client/apis/interviews-api';
-import { Configuration } from '../../../generated-src/client/configuration';
+import type { Interview } from '../../../src/api/models';
 
 // Локальные типы для кандидата
 interface CandidateAuthRequest {
@@ -32,7 +33,6 @@ interface VoiceQuestionResponse {
   audioUrl?: string;
   duration?: number;
 }
-import type { Interview } from '../../../src/api/models';
 
 class CandidateApiService {
   private candidatesApi: CandidatesApi;

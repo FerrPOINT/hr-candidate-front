@@ -68,10 +68,10 @@
     "zustand": "^5.0.6"
   },
   "scripts": {
-    "start": "craco start",
-    "start:3001": "PORT=3001 craco start",
-    "start:3001:win": "set PORT=3001 && craco start",
-    "start:3001:script": "node scripts/start-3001.js",
+    "start": "set PORT=3003 && craco start",
+    "start:3003": "set PORT=3003 && craco start",
+    "start:3003:win": "set PORT=3003 && craco start",
+    "start:3003:script": "node scripts/start-3003.js",
     "start:env": "node scripts/start-with-env.js",
     "start:https": "node scripts/start-https.js",
     "analyze:audio": "node scripts/analyze-audio-support.js",

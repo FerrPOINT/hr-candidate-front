@@ -50,16 +50,16 @@ const SessionInitializer: React.FC<{ zone: 'crm' | 'candidate' }> = ({ zone }) =
         console.error('Failed to restore CRM session:', error);
       });
     }
-    // Для candidate-зоны инициализируем только если путь начинается с /interview или /session
+    // Для candidate-зоны инициализируем только если путь начинается с /interview, /session, /candidate
     if (zone === 'candidate' && (/^\/(interview|session|candidate)/.test(location.pathname))) {
       console.log('🔍 SessionInitializer - Initializing candidate session');
-    restoreSession().catch(error => {
+      restoreSession().catch(error => {
         console.error('Failed to restore candidate session:', error);
-    });
+      });
     }
   }, [zone, location.pathname, restoreSession]);
   return null;
-  };
+};
 
 function App() {
   console.log('🔍 App - Rendering, current pathname:', window.location.pathname);
@@ -72,23 +72,20 @@ function App() {
         {/* Инициализация сессии для кандидата */}
         <SessionInitializer zone="candidate" />
         <Routes>
-          {/* Главная страница с редиректом по роли */}
+          {/* Главная страница с редиректом на логин кандидата */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           
-          {/* Кандидатские страницы - ПЕРЕД всеми остальными */}
-          <Route path="/candidate/*" element={<CandidateApp />} />
-          
           {/* Публичные страницы для кандидата (без CRM Layout) */}
-        <Route path="/interview/:id/session" element={<InterviewSession />} />
-        <Route path="/thank-you" element={<ThankYouPage />} />
+          <Route path="/interview/:id/session" element={<InterviewSession />} />
+          <Route path="/thank-you" element={<ThankYouPage />} />
 
-            {/* Публичные страницы (без Layout) */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/recruiter/login" element={<Login />} />
-            
-            {/* Публичные страницы кандидата - убраны дублирующие роуты */}
-            
-            {/* Страницы кандидатов (с CandidateLayout) */}
+          {/* Публичные страницы (без Layout) */}
+          <Route path="/login" element={<CandidateLogin />} />
+          <Route path="/admin/login" element={<Login />} />
+          <Route path="/recruiter/login" element={<Login />} />
+          
+          {/* Страницы кандидатов (с CandidateLayout) */}
+          <Route path="/candidate/*" element={<CandidateApp />} />
           <Route path="/session/:sessionId" element={<SessionPage />} />
           
           {/* Админский интерфейс (строгий дизайн) */}
@@ -109,27 +106,27 @@ function App() {
             <Route path="questions" element={<QuestionsPage />} />
           </Route>
             
-            {/* Рекрутерский интерфейс (простой дизайн) */}
-            <Route path="/recruiter" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              <Route index element={<StatisticsPage />} />
-              <Route path="vacancies" element={<VacancyList />} />
-              <Route path="vacancies/create" element={<VacancyCreate onClose={() => {}} />} />
-              <Route path="vacancies/:id/edit" element={<VacancyCreate onClose={() => {}} />} />
-              <Route path="vacancies/:id" element={<VacancyCreate onClose={() => {}} />} />
-              <Route path="interviews" element={<InterviewList />} />
-              <Route path="interviews/create" element={<InterviewCreate />} />
-                            <Route path="reports" element={<StatisticsPage />} />
+          {/* Рекрутерский интерфейс (простой дизайн) */}
+          <Route path="/recruiter" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route index element={<StatisticsPage />} />
+            <Route path="vacancies" element={<VacancyList />} />
+            <Route path="vacancies/create" element={<VacancyCreate onClose={() => {}} />} />
+            <Route path="vacancies/:id/edit" element={<VacancyCreate onClose={() => {}} />} />
+            <Route path="vacancies/:id" element={<VacancyCreate onClose={() => {}} />} />
+            <Route path="interviews" element={<InterviewList />} />
+            <Route path="interviews/create" element={<InterviewCreate />} />
+            <Route path="reports" element={<StatisticsPage />} />
             <Route path="stats" element={<StatisticsPage />} />
             <Route path="account" element={<PersonalInfoPage />} />
-              <Route path="team" element={<TeamManagementPage />} />
+            <Route path="team" element={<TeamManagementPage />} />
             <Route path="branding" element={<BrandingPage />} />
             <Route path="learn" element={<BrandingPage />} />
             <Route path="questions" element={<QuestionsPage />} />
-            </Route>
+          </Route>
             
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+        </Routes>
       </Router>
     </ThemeProvider>
   );
