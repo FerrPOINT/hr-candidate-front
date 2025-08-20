@@ -32,7 +32,6 @@ import { apiClient } from '../api/apiClient';
 import type { InterviewStartRequest, InterviewStartResponse } from '../api/models';
 import type { AgentConfig } from '../api/models';
 // import type { VoiceSettings } from '../client/models/voice-settings'; // Module not found, using any
-import elevenLabsConfig from '../config/elevenLabsConfig';
 
 /**
  * Опции запуска интервью
@@ -60,7 +59,10 @@ export class VoiceInterviewService {
    * @returns InterviewStartResponse с параметрами для UI
    */
   static async startInterview(interviewId: number, options: StartInterviewOptions = {}): Promise<InterviewStartResponse> {
-    if (!elevenLabsConfig.enabled) {
+    // Простая проверка вместо конфига
+    const elevenLabsEnabled = false; // Временно отключено
+    
+    if (!elevenLabsEnabled) {
       return {
         signedUrl: '',
         sessionId: '',
@@ -96,7 +98,8 @@ export class VoiceInterviewService {
    * @returns Ответ backend (тип зависит от API)
    */
   static async finishInterview(interviewId: number): Promise<any> {
-    if (!elevenLabsConfig.enabled) return;
+    const elevenLabsEnabled = false; // Временно отключено
+    if (!elevenLabsEnabled) return;
     try {
       const response = await apiClient.interviews.finishInterview(interviewId);
       console.log('✅ Interview finished successfully');
