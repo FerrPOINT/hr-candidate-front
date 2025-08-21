@@ -17,8 +17,6 @@ servers:
   - url: https://api.hr-recruiter.com/api/v1
     description: Production server
 tags:
-  - name: Agents
-    description: Управление AI-агентами для интервью
   - name: AI
     description: Взаимодействие с AI-ассистентом
 paths:
@@ -204,67 +202,6 @@ paths:
                   transcript:
                     type: string
                     description: Транскрибированный текст
-  /ai/generate-position:
-    post:
-      operationId: generatePosition
-      tags:
-        - AI
-      summary: Генерировать вакансию с помощью AI
-      description: |
-        Генерирует структуру вакансии на основе описания пользователя.
-        AI возвращает минимальный набор полей (title, description, topics, level, questions).
-      security:
-        - AdminAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PositionAiGenerationRequest'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PositionAiGenerationResponse'
-        '400':
-          description: Bad Request - некорректные входные данные
-        '500':
-          description: Internal Server Error - ошибка AI или системы
-  /ai/generate-position-data:
-    post:
-      operationId: generatePositionData
-      tags:
-        - AI
-      summary: Сгенерировать данные для вакансии на основе описания
-      security:
-        - AdminAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PositionDataGenerationRequest'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PositionDataGenerationResponse'
-        '400':
-          description: Неверный запрос
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Ошибка генерации
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /ai/transcribe-answer:
     post:
       operationId: transcribeAnswerWithAI
@@ -297,48 +234,30 @@ paths:
                 interviewId:
                   type: integer
                   format: int64
-                  description: ID интервью (определяет кандидата и позицию)
+                  description: ID интервью
                 questionId:
                   type: integer
                   format: int64
-                  description: ID вопроса для создание ответа
+                  description: ID вопроса
       responses:
         '200':
-          description: Аудио успешно обработано
+          description: Аудио успешно транскрибировано и отформатировано
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TranscribeAnswerWithAI200Response'
         '400':
-          description: Неверные параметры запроса
+          description: Неверный запрос
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: Audio file is empty
-        '404':
-          description: Интервью или вопрос не найден
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка транскрибации
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: Interview or question not found
-        '503':
-          description: Сервисы транскрибации недоступны
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: Transcription services are not available
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     InterviewAnswer:
@@ -589,171 +508,6 @@ components:
           items:
             $ref: '#/components/schemas/Agent'
     # AI schemas
-    PositionAiGenerationRequest:
-      type: object
-      description: Запрос на генерацию вакансии с помощью AI
-      properties:
-        description:
-          type: string
-          description: Описание вакансии от пользователя
-          example: Нужен Java разработчик для разработки микросервисов
-        questionsCount:
-          type: integer
-          description: Количество вопросов для собеседования
-          example: 5
-          minimum: 1
-          maximum: 20
-        questionType:
-          type: string
-          description: Тип вопросов (hard, soft, mixed)
-          example: hard
-      required:
-        - description
-    PositionAiGenerationResponse:
-      type: object
-      description: Ответ AI с минимальной структурой вакансии
-      properties:
-        title:
-          type: string
-          description: Название вакансии
-          example: Java Backend Developer
-        description:
-          type: string
-          description: Описание вакансии
-          example: Разработка микросервисов на Java с использованием Spring Framework
-        topics:
-          type: array
-          items:
-            type: string
-          description: Ключевые темы/навыки для собеседования
-          example:
-            - Java Core
-            - Spring Framework
-            - Microservices
-            - Database Design
-        level:
-          type: string
-          enum:
-            - JUNIOR
-            - MIDDLE
-            - SENIOR
-            - LEAD
-          description: Уровень позиции
-          example: middle
-        questions:
-          type: array
-          items:
-            $ref: '#/components/schemas/PositionAiQuestion'
-          description: Список вопросов для собеседования
-      required:
-        - title
-        - topics
-        - level
-        - questions
-    PositionAiQuestion:
-      type: object
-      description: Вопрос для собеседования (AI-генерация)
-      properties:
-        text:
-          type: string
-          description: Текст вопроса
-          example: Расскажите о принципах SOLID
-        type:
-          type: string
-          enum:
-            - TEXT
-            - AUDIO
-            - CHOICE
-          description: Тип вопроса
-          example: text
-        order:
-          type: integer
-          description: Порядок вопроса
-          example: 1
-      required:
-        - text
-        - type
-        - order
-    PositionDataGenerationRequest:
-      type: object
-      properties:
-        description:
-          type: string
-          description: Описание вакансии для генерации данных
-          example: Нужен Java разработчик для разработки микросервисов
-        existingData:
-          type: object
-          description: Существующие данные вакансии (опционально)
-          properties:
-            title:
-              type: string
-            topics:
-              type: array
-              items:
-                type: string
-            level:
-              type: string
-              enum:
-                - JUNIOR
-                - MIDDLE
-                - SENIOR
-                - LEAD
-            tags:
-              type: array
-              items:
-                type: string
-      required:
-        - description
-    PositionDataGenerationResponse:
-      type: object
-      properties:
-        generatedData:
-          type: object
-          properties:
-            title:
-              type: string
-              description: Сгенерированное название вакансии
-              example: Java Backend Developer
-            topics:
-              type: array
-              items:
-                type: string
-              description: Сгенерированные темы для собеседования
-              example:
-                - Java Core
-                - Spring Framework
-                - Microservices
-                - Database Design
-            level:
-              type: string
-              enum:
-                - JUNIOR
-                - MIDDLE
-                - SENIOR
-                - LEAD
-              description: Предлагаемый уровень позиции
-            tags:
-              type: array
-              items:
-                type: string
-              description: Сгенерированные теги
-              example:
-                - Java
-                - Backend
-                - Spring
-                - Microservices
-            suggestedDescription:
-              type: string
-              description: Улучшенное описание вакансии
-        confidence:
-          type: number
-          format: float
-          description: Уверенность в генерации (0-1)
-          example: 0.85
-        message:
-          type: string
-          description: Сообщение о результатах генерации
-          example: Данные успешно сгенерированы на основе описания
     ErrorResponse:
       type: object
       properties:

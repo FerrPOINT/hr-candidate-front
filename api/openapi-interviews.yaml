@@ -392,6 +392,65 @@ paths:
         '403':
           description: Нет доступа к аудиофайлу
 
+  /positions/{positionId}/questions/{questionId}/regenerate:
+    post:
+      tags:
+        - Questions
+      summary: Регенерировать один вопрос
+      description: |
+        Регенерирует конкретный вопрос вакансии с использованием ИИ.
+        Уровень кандидата определяет сложность и типы генерируемых вопросов.
+        Передает в нейросеть ВСЕ поля вакансии для полного контекста.
+      operationId: regeneratePositionQuestion
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вакансии
+        - in: path
+          name: questionId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вопроса для регенерации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionRegenerateRequest'
+      responses:
+        '200':
+          description: Вопрос успешно регенерирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '400':
+          description: Ошибка валидации или некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Вакансия или вопрос не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /positions/{positionId}/interviews:
     get:
       operationId: listPositionInterviews
@@ -613,6 +672,8 @@ paths:
                 $ref: '#/components/schemas/PositionQuestionsResponse'
         '404':
           description: Вакансия не найдена
+
+
 
 components:
   schemas:
@@ -1237,6 +1298,145 @@ components:
         - confidence
         - audioFilePath
         - savedAt
+
+    QuestionRegenerateRequest:
+      type: object
+      description: |
+        Запрос на регенерацию вопроса с использованием ИИ.
+        Уровень кандидата определяет сложность генерируемого вопроса.
+      properties:
+        regenerateReason:
+          type: string
+          description: |
+            Причина регенерации вопроса. Помогает ИИ понять контекст
+            и сгенерировать более подходящий вопрос.
+          example: "Вопрос слишком простой для Senior уровня"
+          maxLength: 500
+        keepContext:
+          type: boolean
+          description: |
+            Сохранить контекст предыдущего вопроса при регенерации.
+            Если true, ИИ будет учитывать тематику и сложность
+            исходного вопроса.
+          default: true
+          example: true
+        aiPrompt:
+          type: string
+          description: |
+            Дополнительный промпт для ИИ с конкретными требованиями
+            к новому вопросу (тема, сложность, тип).
+          example: "Сгенерируй вопрос по микросервисной архитектуре"
+          maxLength: 1000
+      required: []
+
+    InterviewSettingsUpdate:
+      type: object
+      description: |
+        Настройки проведения интервью для вакансии.
+        Все поля являются опциональными - обновляются только переданные значения.
+      properties:
+        answerTime:
+          type: integer
+          format: int32
+          description: |
+            Время ответа на вопрос в секундах.
+            Минимальное значение: 30, максимальное: 600.
+          minimum: 30
+          maximum: 600
+          example: 120
+        language:
+          type: string
+          description: |
+            Язык проведения интервью.
+            Поддерживаемые значения: ru, en.
+          example: ru
+        showOtherLang:
+          type: boolean
+          description: |
+            Показывать вопросы на других языках помимо основного.
+            Полезно для международных компаний.
+          example: false
+        randomOrder:
+          type: boolean
+          description: |
+            Случайный порядок вопросов при проведении интервью.
+            Помогает избежать списывания и стандартизации ответов.
+          example: false
+        saveAudio:
+          type: boolean
+          description: |
+            Сохранять аудио ответы кандидатов.
+            Требует дополнительного места на диске.
+          example: true
+        saveVideo:
+          type: boolean
+          description: |
+            Сохранять видео ответы кандидатов.
+            Требует значительного места на диске.
+          example: false
+      required: []
+
+    PositionQuestionsAndSettingsUpdateRequest:
+      type: object
+      description: |
+        Запрос на обновление настроек интервью и вопросов вакансии.
+        Поддерживает как ручное обновление существующих вопросов,
+        так и автоматическую генерацию новых через ИИ.
+      properties:
+        interviewSettings:
+          $ref: '#/components/schemas/InterviewSettingsUpdate'
+          description: Настройки проведения интервью
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionUpdateRequest'
+          description: |
+            Список вопросов для обновления. Если не указан и
+            regenerateQuestions=true, то вопросы генерируются автоматически.
+          nullable: true
+        regenerateQuestions:
+          type: boolean
+          description: |
+            Перегенерировать все вопросы с новыми настройками через ИИ.
+            При true игнорируется поле questions и генерируются новые вопросы
+            с учетом ВСЕХ полей вакансии.
+          default: false
+          example: true
+        aiPrompt:
+          type: string
+          description: |
+            Дополнительный промпт для ИИ с конкретными требованиями
+            к генерации вопросов (тематика, сложность, типы).
+          example: "Сгенерируй больше вопросов по микросервисной архитектуре"
+          maxLength: 1000
+          nullable: true
+      required:
+        - interviewSettings
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Сообщение об ошибке
+          example: Произошла ошибка при обработке запроса
+        error:
+          type: string
+          description: Тип ошибки
+          example: VALIDATION_ERROR
+        timestamp:
+          type: string
+          format: date-time
+          description: Время возникновения ошибки
+          example: '2024-01-15T10:30:45Z'
+        path:
+          type: string
+          description: Путь запроса
+          example: /api/positions
+      required:
+        - message
+        - error
+        - timestamp
 
   securitySchemes:
     AdminAuth:

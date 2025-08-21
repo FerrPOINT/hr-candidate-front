@@ -20,6 +20,8 @@ tags:
   - name: Positions
     description: Управление вакансиями
 paths:
+
+
   /positions:
     get:
       tags:
@@ -163,6 +165,106 @@ paths:
           description: Вакансия удалена
         '404':
           description: Вакансия не найдена
+  /positions/{id}/status:
+    patch:
+      tags:
+        - Positions
+      summary: Изменить статус вакансии
+      description: |
+        Изменяет статус вакансии с дополнительной логикой и валидацией.
+        Поддерживает переходы между статусами ACTIVE, PAUSED, ARCHIVED.
+        При архивировании автоматически завершает все активные интервью.
+      operationId: changePositionStatus
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вакансии
+        - in: query
+          name: status
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositionStatusEnum'
+          description: Новый статус вакансии
+      responses:
+        '200':
+          description: Статус вакансии успешно изменен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+        '400':
+          description: Некорректный статус или ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Вакансия не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Конфликт - нельзя архивировать вакансию с активными интервью
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /positions/{id}/manager:
+    patch:
+      tags:
+        - Positions
+      summary: Назначить или снять исполнителя (менеджера) вакансии
+      description: |
+        Назначает исполнителя (менеджера) для вакансии или снимает назначение.
+        - Если указан managerId - назначает указанного пользователя менеджером
+        - Если managerId не указан или равен null - снимает текущего менеджера
+        Исполнитель должен быть из той же команды, что и вакансия.
+      operationId: assignPositionManager
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вакансии
+        - in: query
+          name: managerId
+          required: false
+          schema:
+            type: integer
+            format: int64
+            nullable: true
+          description: ID пользователя-исполнителя (null или не указан для снятия назначения)
+      responses:
+        '200':
+          description: Исполнитель успешно назначен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+        '400':
+          description: Ошибка валидации или исполнитель не из той же команды
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Вакансия или пользователь не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /positions/{id}/questions/voice/status:
     get:
       tags:
@@ -223,6 +325,59 @@ paths:
           description: Позиция не найдена
         '409':
           description: Не все вопросы готовы к озвучке
+
+  /positions/{id}/questions-and-settings:
+    post:
+      tags:
+        - Positions
+      summary: Обновить настройки и вопросы вакансии
+      description: |
+        Полностью обновляет настройки интервью и все вопросы вакансии.
+        Поддерживает как ручное обновление, так и автоматическую генерацию
+        через ИИ с передачей ВСЕХ полей вакансии для создания
+        профессиональных, разных и всеохватывающих вопросов.
+      operationId: updatePositionQuestionsAndSettings
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID вакансии
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi-interviews.yaml#/components/schemas/PositionQuestionsAndSettingsUpdateRequest'
+      responses:
+        '200':
+          description: Настройки и вопросы успешно обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi-interviews.yaml#/components/schemas/PositionQuestionsResponse'
+        '400':
+          description: Ошибка валидации или некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Вакансия не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     Position:
@@ -252,9 +407,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-        teamId:
-          type: integer
-          nullable: true
         managerId:
           type: integer
           nullable: true
@@ -324,10 +476,13 @@ components:
           type: integer
         checkType:
           type: string
-        teamId:
-          type: integer
         managerId:
           type: integer
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionCreateRequest'
+          description: Список вопросов для вакансии (опционально)
       required:
         - title
     PositionUpdateRequest:
@@ -489,3 +644,71 @@ components:
         - accepted
         - total
         - taskId 
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Сообщение об ошибке
+          example: Произошла ошибка при обработке запроса
+        error:
+          type: string
+          description: Тип ошибки
+          example: VALIDATION_ERROR
+        timestamp:
+          type: string
+          format: date-time
+          description: Время возникновения ошибки
+          example: '2024-01-15T10:30:45Z'
+        path:
+          type: string
+          description: Путь запроса
+          example: /api/positions
+      required:
+        - message
+        - error
+        - timestamp 
+
+
+
+
+
+
+
+    QuestionCreateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Текст вопроса
+        type:
+          type: string
+          enum: [TEXT, CHOICE, MULTIPLE_CHOICE, RATING]
+          description: Тип вопроса
+        order:
+          type: integer
+          description: Порядок вопроса
+        isRequired:
+          type: boolean
+          description: Обязательный ли вопрос
+          default: true
+        maxDuration:
+          type: integer
+          description: Максимальная длительность ответа в секундах
+        options:
+          type: array
+          items:
+            type: string
+          description: Варианты ответов для вопросов типа CHOICE
+        evaluationCriteria:
+          type: string
+          description: Критерии оценки ответа
+      required:
+        - text
+        - type
+        - order 
+
+
+
+ 

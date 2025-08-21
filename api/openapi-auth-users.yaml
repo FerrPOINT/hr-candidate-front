@@ -186,28 +186,6 @@ paths:
       responses:
         '204':
           description: Пользователь успешно удален
-  /team:
-    get:
-      operationId: getTeam
-      tags:
-        - Team & Users
-      summary: Получить информацию о команде
-      description: |
-        Получение списка всех пользователей команды.
-        Доступен только для роли: admin.
-        Recruiter и viewer не могут видеть других пользователей.
-        Возвращает полную информацию о всех пользователях системы.
-      security:
-        - AdminAuth: []
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
   /account:
     get:
       operationId: getAccount
@@ -705,16 +683,4 @@ components:
       - JUNIOR
       - MIDDLE
       - SENIOR
-      - LEAD
-    Team:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        description:
-          type: string
-      required:
-        - id
-        - name 
+      - LEAD 
