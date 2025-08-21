@@ -1,10 +1,38 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 
 // Candidate Pages
 import CandidateApp from './candidate/App';
-import CandidateLogin from './candidate/pages/CandidateLogin';
+import { AuthForm } from './candidate/components/AuthForm';
+import CandidateEmailVerification from './candidate/pages/CandidateEmailVerification';
+
+// Обёртка для AuthForm с моковыми данными и переходом к верификации
+const InterviewEntry: React.FC = () => {
+  const [step, setStep] = useState<'data' | 'verification'>('data');
+  const [userData, setUserData] = useState<{ firstName: string; lastName: string; email: string } | null>(null);
+
+  const mockJobPosition = {
+    title: "Frontend Developer",
+    department: "Разработка",
+    company: "ВМТ Группа",
+    type: "Полная занятость",
+    questionsCount: 3
+  };
+
+  const handleContinue = (data: { firstName: string; lastName: string; email: string }) => {
+    setUserData(data);
+    setStep('verification');
+  };
+
+  if (step === 'verification' && userData) {
+    // Переходим на страницу верификации с параметрами email и interviewId
+    window.location.href = `/candidate/verify-email?email=${encodeURIComponent(userData.email)}&interviewId=1`;
+    return null;
+  }
+
+  return <AuthForm onContinue={handleContinue} jobPosition={mockJobPosition} />;
+};
 
 // --- Новый компонент для разделения инициализации сессии ---
 const SessionInitializer: React.FC<{ zone: 'crm' | 'candidate' }> = ({ zone }) => {
@@ -42,11 +70,12 @@ function App() {
       {/* Инициализация сессии для кандидата */}
       <SessionInitializer zone="candidate" />
       <Routes>
-        {/* Главная страница с редиректом на логин кандидата */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Главная страница с редиректом на интервью */}
+        <Route path="/" element={<Navigate to="/interview/1" replace />} />
         
         {/* Публичные страницы для кандидата */}
-        <Route path="/login" element={<CandidateLogin />} />
+        <Route path="/interview/:interviewId" element={<InterviewEntry />} />
+        <Route path="/candidate/verify-email" element={<CandidateEmailVerification />} />
         
         {/* Страницы кандидатов */}
         <Route path="/candidate/*" element={<CandidateApp />} />

@@ -19,7 +19,7 @@ interface DialogHistory {
 export function CandidateQuestions({ onComplete, onAISpeakingChange, onNewMessage, onAddAiMessage, onAddUserMessage }: CandidateQuestionsProps) {
   const [showIntroMessages, setShowIntroMessages] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [showQuestionButtons, setShowQuestionButtons] = useState(true);
+  const [showQuestionButtons, setShowQuestionButtons] = useState(false); // Изменено на false
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [askedQuestions, setAskedQuestions] = useState<Set<string>>(new Set());
   const [showFinalMessages, setShowFinalMessages] = useState(false);

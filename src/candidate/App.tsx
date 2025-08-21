@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AuthForm } from './components/AuthForm';
 import { EmailVerification } from './components/EmailVerification';
 import { InterviewProcess } from './components/InterviewProcess';
@@ -29,8 +30,26 @@ const defaultJobPosition: JobPosition = {
 };
 
 export default function App() {
+  const location = useLocation();
+  
   const [currentStage, setCurrentStage] = useState<AppStage>('auth');
   const [userData, setUserData] = useState<UserData | null>(null);
+
+  // Обновляем стадию при изменении URL
+  useEffect(() => {
+    const getInitialStage = (): AppStage => {
+      if (location.pathname.includes('/interview/')) {
+        return 'interview';
+      }
+      if (location.pathname.includes('/verify-email')) {
+        return 'email-verification';
+      }
+      return 'auth';
+    };
+    
+    const newStage = getInitialStage();
+    setCurrentStage(newStage);
+  }, [location.pathname]);
 
   const handleAuthComplete = (data: UserData) => {
     console.log('🔐 Auth completed:', data);
