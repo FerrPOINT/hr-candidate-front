@@ -1,14 +1,17 @@
+import { apiService } from '../../services/apiService';
+import type { CandidateLoginRequest, CandidateLoginResponse, CandidateEmailVerificationRequest, CandidateEmailVerificationResponse, InterviewStartResponse } from '../../api/models';
 import { Configuration } from '../../../generated-src/client/configuration';
+import { InterviewsApi } from '../../../generated-src/client/apis/interviews-api';
 import { CandidatesApi } from '../../../generated-src/client/apis/candidates-api';
 import { VoiceInterviewsApi } from '../../../generated-src/client/apis/voice-interviews-api';
-import { InterviewsApi } from '../../../generated-src/client/apis/interviews-api';
-import type { Interview } from '../../../src/api/models';
 
-// Локальные типы для кандидата
+// Локальные типы для кандидата (обновлены в соответствии с новым API)
 interface CandidateAuthRequest {
   firstName: string;
   lastName: string;
   email: string;
+  positionId: number; // Добавляем обязательное поле согласно API спецификации
+  verificationCode?: string; // Добавлено поле для верификации
 }
 
 interface CandidateAuthResponse {
@@ -17,13 +20,30 @@ interface CandidateAuthResponse {
     firstName: string;
     lastName: string;
     email: string;
+    phone?: string;
     status: string;
-    positionId: number;
     createdAt: string;
     updatedAt: string;
   };
-  token: string;
-  verificationRequired: boolean;
+  token?: string; // Токен может отсутствовать до верификации
+  verificationRequired: boolean; // Флаг необходимости верификации
+}
+
+// Локальные типы для интервью
+interface Interview {
+  id: number;
+  candidateId: number;
+  positionId: number;
+  status: InterviewStatusEnum;
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+}
+
+enum InterviewStatusEnum {
+  NOT_STARTED = 'NOT_STARTED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  FINISHED = 'FINISHED'
 }
 
 // Локальный тип для голосового вопроса
@@ -35,138 +55,202 @@ interface VoiceQuestionResponse {
 }
 
 class CandidateApiService {
-  private candidatesApi: CandidatesApi;
-  private voiceInterviewsApi: VoiceInterviewsApi;
-  private interviewsApi: InterviewsApi;
-  private baseUrl: string;
-
-  constructor() {
-    this.baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
-    
-    const config = new Configuration({
-      basePath: this.baseUrl,
-    });
-    
-    this.candidatesApi = new CandidatesApi(config);
-    this.voiceInterviewsApi = new VoiceInterviewsApi(config);
-    this.interviewsApi = new InterviewsApi(config);
-  }
-
   /**
-   * Авторизация кандидата (find-or-create)
+   * Авторизация кандидата (find-or-create) - публичный эндпоинт
    */
-  async authCandidate(request: CandidateAuthRequest): Promise<CandidateAuthResponse> {
-    // Для тестирования - всегда возвращаем успешный ответ с токеном
-    console.log('🔧 TEST MODE: Returning mock successful response for candidate auth');
-    return {
-              candidate: {
-          id: 1,
-          firstName: request.firstName,
-          lastName: request.lastName,
-          email: request.email,
-          status: 'NOT_STARTED',
-          positionId: 1,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-      token: 'test-token-' + Date.now(),
-      verificationRequired: true
-    };
-    
-    // Оригинальная логика (закомментирована для тестирования):
-    /*
+  async loginCandidate(request: CandidateLoginRequest): Promise<CandidateLoginResponse> {
     try {
-      console.log('Authenticating candidate:', { email: request.email, firstName: request.firstName });
+      console.log('🚀 candidateApiService.loginCandidate вызван');
+      console.log('📝 Входные данные:', { email: request.email, firstName: request.firstName, positionId: request.positionId });
       
-      const response = await this.candidatesApi.authCandidate(request);
-      console.log('Auth response:', response.data);
+      // Используем публичный клиент без токена
+      console.log('🔗 Получаем публичный API клиент...');
+      const publicClient = apiService.getPublicApiClient();
+      console.log('✅ Публичный клиент получен:', publicClient);
       
+      console.log('📤 Вызываем API candidates.loginCandidate...');
+      const response = await publicClient.candidates.loginCandidate(request);
+      
+      console.log('📥 Получен ответ от API:', response);
+      console.log('📊 Данные ответа:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Candidate auth error:', error);
-      
-      if (error.response?.status === 400) {
-        throw new Error('Неверные данные для авторизации');
-      } else if (error.response?.status === 404) {
-        throw new Error('Извините, для вас не назначено собеседование. Пожалуйста, обратитесь к рекрутеру.');
-      } else if (error.response?.status >= 500) {
-        throw new Error('Ошибка сервера. Попробуйте позже');
-      } else {
-        // Проверяем сообщение об ошибке на наличие информации о том, что кандидат не найден
-        const errorMessage = error.response?.data?.message || error.message || 'Ошибка авторизации кандидата';
-        if (errorMessage.toLowerCase().includes('found user false') || 
-            errorMessage.toLowerCase().includes('candidate not found') ||
-            errorMessage.toLowerCase().includes('не найден')) {
-          throw new Error('Извините, для вас не назначено собеседование. Пожалуйста, обратитесь к рекрутеру.');
-        }
-        throw new Error(errorMessage);
-      }
+      console.error('💥 Ошибка в candidateApiService.loginCandidate:', error);
+      console.error('🔍 Детали ошибки:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: error.config
+      });
+      throw new Error('Ошибка авторизации кандидата');
     }
-    */
   }
 
   /**
-   * Проверка кода верификации email
+   * Верификация email кандидата - публичный эндпоинт
    */
-  async verifyEmail(request: CandidateAuthRequest): Promise<CandidateAuthResponse> {
+  async verifyCandidateEmail(request: CandidateEmailVerificationRequest): Promise<CandidateEmailVerificationResponse> {
     try {
-      console.log('Verifying email:', { email: request.email });
+      console.log('Verifying candidate email:', { email: request.email });
       
-      const response = await this.candidatesApi.authCandidate(request);
+      // Используем публичный клиент без токена
+      const response = await apiService.getPublicApiClient().candidates.verifyCandidateEmail(request);
+      
       console.log('Verification response:', response.data);
-      
       return response.data;
     } catch (error: any) {
-      console.error('Email verification error:', error);
+      console.error('Error verifying candidate email:', error);
+      throw new Error('Ошибка верификации email');
+    }
+  }
+
+  /**
+   * Проверка существования собеседования по email - публичный эндпоинт
+   */
+  async checkInterviewExists(email: string): Promise<{ exists: boolean; interviewId?: number }> {
+    try {
+      console.log('Checking interview existence for email:', email);
       
-      // Для тестирования - всегда возвращаем успешный ответ
-      console.log('🔧 TEST MODE: Returning mock successful response for email verification');
-      return {
-        candidate: {
-          id: 1,
-          firstName: 'Тест',
-          lastName: 'Кандидат',
-          email: request.email,
-          status: 'NEW',
-          positionId: 1,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        token: 'test-verification-token-' + Date.now(),
-        verificationRequired: false
+      // Используем публичный клиент без токена
+      const response = await apiService.getPublicApiClient().candidates.loginCandidate({ 
+        firstName: '', 
+        lastName: '', 
+        email,
+        positionId: 1 // Используем дефолтное значение для проверки
+      });
+      
+      // Если есть ответ и не требуется верификация, значит собеседование существует
+      const exists = response.data && !response.data.verificationRequired;
+      const interviewId = response.data?.candidate?.id;
+      
+      console.log('Interview check result:', { exists, interviewId });
+      return { exists, interviewId };
+    } catch (error: any) {
+      console.error('Error checking interview existence:', error);
+      return { exists: false };
+    }
+  }
+
+  /**
+   * Создание API клиента с токеном
+   */
+  private createApiClient(token: string) {
+    const config = new Configuration({
+      basePath: (process.env.REACT_APP_API_BASE_URL || '/api/v1').toString().trim().replace(/\/+$/, ''),
+      accessToken: () => token
+    });
+
+    return {
+      interviews: new InterviewsApi(config),
+      candidates: new CandidatesApi(config),
+      voiceInterviews: new VoiceInterviewsApi(config)
+    };
+  }
+
+  /**
+   * Старт собеседования - защищенный эндпоинт (требует токен)
+   */
+  async startInterview(interviewId: number, token: string): Promise<{ success: boolean; interview?: Interview }> {
+    try {
+      console.log('Starting interview:', { interviewId, token: token.substring(0, 10) + '...' });
+      
+      // Создаем API клиент с токеном
+      const apiClient = this.createApiClient(token);
+      const response = await apiClient.interviews.startInterview(interviewId, {
+        includeCandidateData: true
+      });
+      
+      console.log('Start interview response:', response.data);
+      
+      // Маппим ответ API в локальный тип
+      const interview: Interview = {
+        id: response.data.interviewId || interviewId,
+        candidateId: 0, // Будет заполнено из candidateData если доступно
+        positionId: 0, // Будет заполнено из candidateData если доступно
+        status: this.mapInterviewStatus(response.data.status),
+        createdAt: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
+        finishedAt: undefined
       };
       
-      // Оригинальная логика (закомментирована для тестирования):
-      /*
-      if (error.response?.status === 400) {
-        throw new Error('Неверный код верификации');
-      } else if (error.response?.status === 404) {
-        throw new Error('Код верификации не найден');
-      } else if (error.response?.status >= 500) {
-        throw new Error('Ошибка сервера. Попробуйте позже');
-      } else {
-        throw new Error('Ошибка верификации email');
-      }
-      */
+      return { success: true, interview };
+    } catch (error: any) {
+      console.error('Error starting interview:', error);
+      throw new Error('Ошибка запуска собеседования');
+    }
+  }
+
+  /**
+   * Маппинг статуса интервью из API в локальный enum
+   */
+  private mapInterviewStatus(status?: string): InterviewStatusEnum {
+    switch (status) {
+      case 'NOT_STARTED':
+        return InterviewStatusEnum.NOT_STARTED;
+      case 'IN_PROGRESS':
+        return InterviewStatusEnum.IN_PROGRESS;
+      case 'FINISHED':
+        return InterviewStatusEnum.FINISHED;
+      default:
+        return InterviewStatusEnum.NOT_STARTED;
+    }
+  }
+
+  /**
+   * Получение краткой информации о вакансии - публичный эндпоинт
+   */
+  async getPositionSummary(positionId: number): Promise<{ 
+    id: number; 
+    title: string; 
+    department: string;
+    company: string;
+    type: string;
+    questionsCount: number 
+  }> {
+    try {
+      console.log('Getting position summary for positionId:', positionId);
+      
+      // Используем публичный клиент без токена
+      const response = await apiService.getPublicApiClient().positions.getPositionSummary(positionId);
+      console.log('API response for position summary:', response.data);
+        
+      // API возвращает только id, title, questionsCount
+      // Остальные поля заполняем дефолтными значениями
+      return {
+        id: response.data.id,
+        title: response.data.title,
+        department: 'Engineering', // Дефолтное значение
+        company: 'WMT group',     // Дефолтное значение
+        type: 'Full-time',        // Дефолтное значение
+        questionsCount: response.data.questionsCount
+      };
+    } catch (error: any) {
+      console.error('Error getting position summary:', error);
+      // Fallback данные - используются только если API недоступен
+      return {
+        id: positionId,
+        title: 'Software Engineer',
+        department: 'Engineering',
+        company: 'WMT group',
+        type: 'Full-time',
+        questionsCount: 3
+      };
     }
   }
 
   /**
    * Получение информации о кандидате
    */
-  async getCandidateInfo(candidateId: string): Promise<any> {
+  async getCandidateInfo(candidateId: string, token: string): Promise<any> {
     try {
       console.log('Getting candidate info:', candidateId);
       
-      // Здесь будет вызов API для получения информации о кандидате
-      // Пока возвращаем мок данные
-      return {
-        id: candidateId,
-        firstName: 'Иван',
-        lastName: 'Иванов',
-        email: 'ivan@example.com',
-        status: 'active'
-      };
+      const apiClient = this.createApiClient(token);
+      const response = await apiClient.candidates.getCandidate(parseInt(candidateId));
+      console.log('Get candidate info response:', response.data);
+      
+      return response.data;
     } catch (error: any) {
       console.error('Get candidate info error:', error);
       throw new Error('Ошибка получения информации о кандидате');
@@ -176,26 +260,15 @@ class CandidateApiService {
   /**
    * Получение информации об интервью
    */
-  async getInterviewInfo(interviewId: string): Promise<Interview> {
+  async getInterviewInfo(interviewId: string, token: string): Promise<any> {
     try {
-      console.log('🔧 TEST MODE: Returning mock interview info for interview:', interviewId);
+      console.log('Getting interview info for interview:', interviewId);
       
-      // Заглушка для тестирования
-      const mockInterview: Interview = {
-        id: parseInt(interviewId),
-        candidateId: 1,
-        positionId: 1,
-        status: 'NOT_STARTED',
-        createdAt: new Date().toISOString()
-      };
+      const apiClient = this.createApiClient(token);
+      const response = await apiClient.interviews.getInterview(parseInt(interviewId));
+      console.log('Get interview info response:', response.data);
       
-      console.log('🔧 TEST MODE: Mock interview info:', mockInterview);
-      return mockInterview;
-      
-      // Оригинальный код закомментирован для тестирования
-      // const response = await this.interviewsApi.getInterview(parseInt(interviewId));
-      // console.log('Interview info response:', response.data);
-      // return response.data;
+      return response.data;
     } catch (error: any) {
       console.error('Get interview info error:', error);
       throw new Error('Ошибка получения информации об интервью');
@@ -203,58 +276,43 @@ class CandidateApiService {
   }
 
   /**
-   * Начать voice интервью
+   * Старт голосового интервью
    */
-  async startVoiceInterview(interviewId: string): Promise<any> {
+  async startVoiceInterview(interviewId: string, token: string): Promise<any> {
     try {
-      console.log('🔧 TEST MODE: Returning mock start voice interview response for interview:', interviewId);
+      console.log('Starting voice interview:', interviewId);
       
-      // Заглушка для тестирования
-      const mockResponse = {
-        interviewId: parseInt(interviewId),
-        status: 'STARTED',
-        sessionId: `session-${Date.now()}`,
-        message: 'Voice интервью успешно запущено'
-      };
+      const apiClient = this.createApiClient(token);
+      const response = await apiClient.voiceInterviews.startVoiceInterview(parseInt(interviewId));
+      console.log('Start voice interview response:', response.data);
       
-      console.log('🔧 TEST MODE: Mock start voice interview response:', mockResponse);
-      return mockResponse;
-      
-      // Оригинальный код закомментирован для тестирования
-      // const response = await this.voiceInterviewsApi.startVoiceInterview(parseInt(interviewId));
-      // console.log('Start voice interview response:', response.data);
-      // return response.data;
+      return response.data;
     } catch (error: any) {
       console.error('Start voice interview error:', error);
-      throw new Error('Ошибка запуска voice интервью');
+      throw new Error('Ошибка запуска голосового интервью');
     }
   }
 
   /**
-   * Получить следующий вопрос для voice интервью
+   * Получение следующего голосового вопроса
    */
-  async getNextVoiceQuestion(interviewId: string): Promise<VoiceQuestionResponse> {
+  async getNextVoiceQuestion(interviewId: string, token: string): Promise<any> {
     try {
-      console.log('🔧 TEST MODE: Returning mock next voice question for interview:', interviewId);
+      console.log('Getting next voice question for interview:', interviewId);
       
-      // Заглушка для тестирования
-      const mockResponse: VoiceQuestionResponse = {
-        id: '1',
-        text: 'Расскажите о своем опыте работы в сфере разработки',
-        audioUrl: 'https://example.com/question1.mp3',
-        // questionNumber: 1, // Убрано для соответствия интерфейсу
-        // totalQuestions: 3, // Убрано для соответствия интерфейсу
-        // maxDuration: 120, // Убрано для соответствия интерфейсу
-        // position: 'Frontend Developer' // Убрано для соответствия интерфейсу
+      const apiClient = this.createApiClient(token);
+      const response = await apiClient.voiceInterviews.getNextVoiceQuestion(parseInt(interviewId));
+      console.log('Get next voice question response:', response.data);
+      
+      // Маппим в локальный тип
+      const question: VoiceQuestionResponse = {
+        id: String(response.data.questionId),
+        text: response.data.text,
+        audioUrl: response.data.audioUrl,
+        duration: response.data.maxDuration
       };
       
-      console.log('🔧 TEST MODE: Mock next voice question response:', mockResponse);
-      return mockResponse;
-      
-      // Оригинальный код закомментирован для тестирования
-      // const response = await this.voiceInterviewsApi.getNextVoiceQuestion(parseInt(interviewId));
-      // console.log('Next voice question response:', response.data);
-      // return response.data;
+      return question;
     } catch (error: any) {
       console.error('Get next voice question error:', error);
       throw new Error('Ошибка получения следующего вопроса');
@@ -262,19 +320,20 @@ class CandidateApiService {
   }
 
   /**
-   * Отправить голосовой ответ
+   * Отправка голосового ответа
    */
-  async submitVoiceAnswer(interviewId: string, questionId: string, audioFile: File): Promise<any> {
+  async submitVoiceAnswer(interviewId: string, questionId: string, audioFile: File, token: string): Promise<any> {
     try {
       console.log('Submitting voice answer:', { interviewId, questionId, audioFile });
       
-      const response = await this.voiceInterviewsApi.submitVoiceAnswer(
+      const apiClient = this.createApiClient(token);
+      const response = await apiClient.voiceInterviews.submitVoiceAnswer(
         parseInt(interviewId), 
         parseInt(questionId), 
         audioFile
       );
-      console.log('Submit voice answer response:', response.data);
       
+      console.log('Submit voice answer response:', response.data);
       return response.data;
     } catch (error: any) {
       console.error('Submit voice answer error:', error);
@@ -283,13 +342,14 @@ class CandidateApiService {
   }
 
   /**
-   * Завершить voice интервью
+   * Завершение голосового интервью
    */
-  async finishVoiceInterview(interviewId: string): Promise<Interview> {
+  async finishVoiceInterview(interviewId: string, token: string): Promise<any> {
     try {
       console.log('Finishing voice interview:', interviewId);
       
-      const response = await this.voiceInterviewsApi.endVoiceInterview(parseInt(interviewId));
+      const apiClient = this.createApiClient(token);
+      const response = await apiClient.voiceInterviews.endVoiceInterview(parseInt(interviewId));
       console.log('Finish voice interview response:', response.data);
       
       return response.data;
@@ -300,29 +360,30 @@ class CandidateApiService {
   }
 
   /**
-   * Получить аудиофайл ответа кандидата
+   * Получение аудио ответа
    */
-  async getAnswerAudio(interviewId: string, questionId: string): Promise<File> {
+  async getAnswerAudio(interviewId: string, questionId: string, token: string): Promise<any> {
     try {
       console.log('Getting answer audio:', { interviewId, questionId });
       
-      const response = await this.voiceInterviewsApi.getAnswerAudio(
+      const apiClient = this.createApiClient(token);
+      const response = await apiClient.voiceInterviews.getAnswerAudio(
         parseInt(interviewId), 
         parseInt(questionId)
       );
-      console.log('Get answer audio response:', response.data);
       
+      console.log('Get answer audio response:', response.data);
       return response.data;
     } catch (error: any) {
       console.error('Get answer audio error:', error);
-      throw new Error('Ошибка получения аудиофайла ответа');
+      throw new Error('Ошибка получения аудио ответа');
     }
   }
 
   /**
-   * Отправка ответа на вопрос интервью (для совместимости)
+   * Отправка ответа на вопрос интервью - защищенный эндпоинт
    */
-  async submitInterviewAnswer(candidateId: string, questionId: string, answer: string): Promise<any> {
+  async submitInterviewAnswer(candidateId: string, questionId: string, answer: string, token: string): Promise<any> {
     try {
       console.log('Submitting interview answer:', { candidateId, questionId, answer });
       

@@ -7,9 +7,9 @@ import { InterviewProcess } from './InterviewProcess';
 type FlowStage = 'auth' | 'email-verification' | 'interview';
 
 interface UserData {
-  email: string;
   firstName: string;
   lastName: string;
+  email: string;
 }
 
 interface JobPosition {
@@ -23,17 +23,17 @@ interface JobPosition {
 export function InterviewFlow() {
   const [stage, setStage] = useState<FlowStage>('auth');
   const [userData, setUserData] = useState<UserData>({
-    email: '',
     firstName: '',
-    lastName: ''
+    lastName: '',
+    email: ''
   });
 
   // Данные о позиции - можно получать из API или пропсов
   const jobPosition: JobPosition = {
-    title: 'Frontend Developer',
-    department: 'Разработка',
-    company: 'WMT Digital',
-    type: 'Полная занятость',
+    title: 'Software Engineer',
+    department: 'Engineering',
+    company: 'WMT group',
+    type: 'Full-time',
     questionsCount: 8
   };
 
@@ -53,7 +53,7 @@ export function InterviewFlow() {
         return (
           <AuthForm 
             onContinue={handleAuthSuccess}
-            jobPosition={jobPosition}
+            interviewId={1}
           />
         );
       
@@ -63,7 +63,7 @@ export function InterviewFlow() {
             email={userData.email}
             onContinue={handleEmailVerified}
             onGoBack={() => setStage('auth')}
-            jobPosition={jobPosition}
+            interviewId={1}
           />
         );
       

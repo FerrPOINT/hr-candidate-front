@@ -146,7 +146,7 @@ export const mockUser = {
 
 export const mockPosition = {
     id: '1',
-    title: 'Frontend Developer',
+            title: 'Software Engineer',
     description: 'React developer position',
     status: 'ACTIVE' as const,
     level: 'MIDDLE' as const,

@@ -26,6 +26,8 @@ import {
   LoginRequest,
   AuthResponse,
   PositionStatusEnum,
+  InterviewStatusEnum,
+  InterviewResultEnum,
   TranscribeAudio200Response,
   TranscribeAnswerWithAI200Response,
   BaseQuestionFields,
@@ -86,13 +88,20 @@ class ApiService {
 
   // Get API client without authentication for public endpoints
   getPublicApiClient(): ApiClient {
+    console.log('🔗 apiService.getPublicApiClient вызван');
+    
+    const basePath = (process.env.REACT_APP_API_BASE_URL || '/api/v1').toString().trim().replace(/\/+$/, '');
+    console.log('📍 Base path для публичного клиента:', basePath);
+    
     // Создаем новый клиент без токена для публичных эндпоинтов
     const config = new Configuration({
-      basePath: (process.env.REACT_APP_API_BASE_URL || '/api/v1').toString().trim().replace(/\/+$/, '')
+      basePath: basePath
       // Не устанавливаем accessToken для публичных эндпоинтов
     });
+    
+    console.log('⚙️ Конфигурация публичного клиента создана:', config);
 
-    return {
+    const publicClient = {
       auth: new AuthApi(config),
       account: new AccountApi(config),
       candidates: new CandidatesApi(config),
@@ -107,6 +116,9 @@ class ApiService {
       voiceInterviews: new VoiceInterviewsApi(config),
       generation: new GenerationApi(config)
     };
+    
+    console.log('✅ Публичный API клиент создан:', publicClient);
+    return publicClient;
   }
 
   // === AUTHENTICATION ===
@@ -179,44 +191,6 @@ class ApiService {
       }
     } catch (error: any) {
       console.error('getPositions error:', error);
-
-      // If 400 error, try without status parameter
-      if (error.response?.status === 400 && params?.status) {
-        try {
-          const page0 = params?.page != null ? Math.max(0, params.page - 1) : 0;
-          const retryResponse = await this.getApiClient().positions.listPositions(
-            undefined,
-            params?.search,
-            undefined,
-            page0,
-            params?.size
-          );
-
-          const retryData = retryResponse.data as PositionsPaginatedResponse;
-
-          if (retryData.content && Array.isArray(retryData.content)) {
-            // Безопасно маппим enum'ы для каждой позиции
-            const items = retryData.content.map(position => ({
-              ...position,
-              status: mapPositionStatusEnum(position.status)
-            }));
-
-            return {
-              items: items || [],
-              total: retryData.totalElements || 0
-            };
-          } else {
-            return {
-              items: [],
-              total: 0
-            };
-          }
-        } catch (retryError) {
-          console.error('Retry also failed:', retryError);
-          throw retryError;
-        }
-      }
-
       throw error;
     }
   }
@@ -324,6 +298,9 @@ class ApiService {
   async getInterviews(params?: {
     positionId?: number;
     candidateId?: number;
+    status?: InterviewStatusEnum;
+    result?: InterviewResultEnum;
+    search?: string;
     page?: number;
     size?: number;
     sort?: string;
@@ -333,8 +310,9 @@ class ApiService {
       const response = await this.getApiClient().interviews.listInterviews(
         params?.positionId,
         params?.candidateId,
-        undefined,
-        undefined,
+        params?.status,
+        params?.result,
+        params?.search,
         page0,
         params?.size,
         params?.sort
@@ -370,6 +348,7 @@ class ApiService {
         try {
           const page0 = params?.page != null ? Math.max(0, params.page - 1) : 0;
           const retryResponse = await this.getApiClient().interviews.listInterviews(
+            undefined,
             undefined,
             undefined,
             undefined,
@@ -891,7 +870,7 @@ class ApiService {
 
   // Candidates
   async authCandidate(authData: any): Promise<any> {
-    const response = await this.getPublicApiClient().candidates.authCandidate(authData);
+    const response = await this.getPublicApiClient().candidates.loginCandidate(authData);
     return response.data;
   }
 

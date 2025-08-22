@@ -29,8 +29,7 @@ const DEV_CONFIG = {
   mockUserData: {
     firstName: 'Александр',
     lastName: 'Петров',
-    email: 'alex.petrov@example.com',
-    phone: '+7 (999) 123-45-67'
+    email: 'alex.petrov@example.com'
   } as UserData
 };
 
@@ -416,11 +415,11 @@ export function NewInterviewChat() {
 
   // Render screens based on stage
   if (stage === 'auth') {
-    return <AuthForm onContinue={handleAuthComplete} jobPosition={jobPosition} />;
+    return <AuthForm onContinue={handleAuthComplete} interviewId={1} />;
   }
 
   if (stage === 'email-verification') {
-    return <EmailVerification email={userData?.email || ''} onContinue={handleEmailVerified} onGoBack={handleGoBackToAuth} jobPosition={jobPosition} />;
+    return <EmailVerification email={userData?.email || ''} onContinue={handleEmailVerified} onGoBack={handleGoBackToAuth} interviewId={1} />;
   }
 
   if (stage === 'rules') {

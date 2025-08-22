@@ -50,6 +50,10 @@ paths:
           schema: { $ref: '#/components/schemas/InterviewResultEnum' }
           description: Фильтр по результату собеседования
         - in: query
+          name: search
+          schema: { type: string }
+          description: Поиск по названию вакансии, имени, фамилии, email кандидата
+        - in: query
           name: page
           schema: { type: integer, default: 0, minimum: 0 }
           description: Номер страницы (начиная с 0)
@@ -59,8 +63,8 @@ paths:
           description: Размер страницы
         - in: query
           name: sort
-          schema: { type: string, default: createdAt }
-          description: Поле для сортировки
+          schema: { type: string, default: "createdAt,desc" }
+          description: Сортировка в формате "поле,направление" (createdAt,desc, startedAt,asc, candidate.firstName,asc, status,asc, result,asc, score,desc)
       responses:
         '200':
           description: Список собеседований
@@ -473,6 +477,10 @@ paths:
           schema: { $ref: '#/components/schemas/InterviewResultEnum' }
           description: Фильтр по результату собеседования
         - in: query
+          name: search
+          schema: { type: string }
+          description: Поиск по имени, фамилии, email кандидата
+        - in: query
           name: page
           schema: { type: integer, default: 0 }
           description: Номер страницы
@@ -482,8 +490,8 @@ paths:
           description: Размер страницы
         - in: query
           name: sort
-          schema: { type: string, default: createdAt }
-          description: Поле для сортировки
+          schema: { type: string, default: "createdAt,desc" }
+          description: Сортировка в формате "поле,направление" (createdAt,desc, startedAt,asc, candidate.firstName,asc, status,asc, result,asc, score,desc)
       responses:
         '200':
           description: OK
@@ -677,6 +685,44 @@ paths:
 
 components:
   schemas:
+    # === SORTING FIELDS ===
+    InterviewSortFields:
+      type: object
+      description: |
+        Поля для сортировки собеседований.
+        
+        **Временные поля:**
+        - `createdAt` - время создания
+        - `startedAt` - время начала
+        - `updatedAt` - время обновления
+        - `finishedAt` - время завершения
+        
+        **Поля кандидата:**
+        - `candidate.firstName` - имя кандидата
+        - `candidate.lastName` - фамилия кандидата
+        - `candidate.email` - email кандидата
+        
+        **Поля интервью:**
+        - `status` - статус собеседования
+        - `result` - результат собеседования
+        - `score` - оценка AI
+        
+        **Примеры сортировки:**
+        - `createdAt,desc` - по времени создания (новые сначала)
+        - `startedAt,asc` - по времени начала (ранние сначала)
+        - `candidate.firstName,asc` - по имени кандидата (А-Я)
+        - `score,desc` - по оценке (высокие сначала)
+      properties:
+        field:
+          type: string
+          enum: [createdAt, startedAt, updatedAt, finishedAt, candidate.firstName, candidate.lastName, candidate.email, status, result, score]
+          description: Поле для сортировки
+        direction:
+          type: string
+          enum: [asc, desc]
+          description: Направление сортировки
+          default: desc
+
     # === INTERVIEWS ===
     Interview:
       type: object

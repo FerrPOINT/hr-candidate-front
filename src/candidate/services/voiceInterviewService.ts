@@ -78,13 +78,13 @@ class VoiceInterviewService {
       const response = await apiClient.interviews.getInterview(parseInt(interviewId));
       return {
         id: response.data.id?.toString() || interviewId,
-        positionId: response.data.position?.id?.toString() || '1',
-        positionTitle: response.data.position?.title || 'Frontend Developer',
-        candidateId: response.data.candidate?.id?.toString() || '1',
+        positionId: response.data.positionId?.toString() || '1',
+        positionTitle: 'Frontend Developer', // Пока используем заглушку
+        candidateId: response.data.candidateId?.toString() || '1',
         status: response.data.status || 'NOT_STARTED',
-        scheduledDate: response.data.scheduledDate,
+        scheduledDate: response.data.createdAt, // Используем createdAt как scheduledDate
         startedAt: response.data.startedAt,
-        completedAt: response.data.completedAt
+        completedAt: response.data.finishedAt // Используем finishedAt как completedAt
       };
     } catch (error: any) {
       console.error('Get interview info error:', error);

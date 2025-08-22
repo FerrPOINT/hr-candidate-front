@@ -1,9 +1,11 @@
 import { candidateApiService } from './candidateApiService';
+import type { CandidateLoginRequest, CandidateLoginResponse, CandidateEmailVerificationRequest, CandidateEmailVerificationResponse } from '../../api/models';
 
 export interface CandidateAuthData {
   firstName: string;
   lastName: string;
   email: string;
+  positionId: number; // Добавляем обязательное поле согласно API спецификации
   token?: string;
 }
 
@@ -30,77 +32,64 @@ class CandidateAuthService {
    * Аутентификация кандидата
    */
   async authenticate(authData: CandidateAuthData): Promise<AuthResponse> {
-    console.log('Starting candidate authentication:', { email: authData.email, firstName: authData.firstName });
+    console.log('🚀 candidateAuthService.authenticate вызван');
+    console.log('📝 Входные данные:', { email: authData.email, firstName: authData.firstName, positionId: authData.positionId });
     
-    // Для тестирования - всегда получаем успешный ответ от API
-    const response = await candidateApiService.authCandidate({
-      firstName: authData.firstName,
-      lastName: authData.lastName,
-      email: authData.email
-    });
-
-    console.log('Authentication successful:', response);
-
-    // Сохраняем данные в localStorage
-    if (response.candidate?.id) {
-      localStorage.setItem(CandidateAuthService.CANDIDATE_ID_KEY, String(response.candidate.id));
-    }
-    if (response.token) {
-      localStorage.setItem(CandidateAuthService.AUTH_TOKEN_KEY, response.token);
-    }
-
-    return {
-      success: true,
-      candidateId: response.candidate?.id ? String(response.candidate.id) : undefined,
-      message: 'Аутентификация успешна'
-    };
-    
-    // Оригинальная логика (закомментирована для тестирования):
-    /*
     try {
-      console.log('Starting candidate authentication:', { email: authData.email, firstName: authData.firstName });
-      
-      const response = await candidateApiService.authCandidate({
+      console.log('🔐 Вызываем candidateApiService.loginCandidate...');
+      const response = await candidateApiService.loginCandidate({
         firstName: authData.firstName,
         lastName: authData.lastName,
-        email: authData.email
+        email: authData.email,
+        positionId: authData.positionId
       });
 
-      console.log('Authentication successful:', response);
+      console.log('📥 Получен ответ от candidateApiService:', response);
 
-      // Сохраняем данные в localStorage
+      // Сохраняем данные кандидата в localStorage
       if (response.candidate?.id) {
+        console.log('💾 Сохраняем candidateId в localStorage:', response.candidate.id);
         localStorage.setItem(CandidateAuthService.CANDIDATE_ID_KEY, String(response.candidate.id));
       }
-      if (response.token) {
-        localStorage.setItem(CandidateAuthService.AUTH_TOKEN_KEY, response.token);
-      }
 
-      return {
-        success: true,
-        candidateId: response.candidate?.id ? String(response.candidate.id) : undefined,
-        message: 'Аутентификация успешна'
-      };
+      // В CandidateLoginResponse нет токена - он будет получен только после верификации
+      // Токен сохраняем только если верификация не требуется (но это не должно происходить)
+      if (response.verificationRequired) {
+        console.log('✅ Верификация требуется, возвращаем успех');
+        return {
+          success: true,
+          candidateId: response.candidate?.id ? String(response.candidate.id) : undefined,
+          message: 'Требуется верификация email'
+        };
+      } else {
+        // Если верификация не требуется, значит что-то пошло не так
+        console.warn('⚠️ Неожиданный ответ: верификация не требуется, но токен не предоставлен');
+        return {
+          success: false,
+          error: 'Ошибка аутентификации: неожиданный ответ от сервера'
+        };
+      }
     } catch (error: any) {
-      console.error('Authentication failed:', error);
+      console.error('💥 Ошибка в candidateAuthService.authenticate:', error);
       
       // Специальная обработка для случая когда кандидат не найден
       const errorMessage = error.message || 'Ошибка аутентификации';
       if (errorMessage.includes('не назначено собеседование') ||
           errorMessage.toLowerCase().includes('found user false') ||
           errorMessage.toLowerCase().includes('candidate not found')) {
+        console.log('🚫 Кандидат не найден, возвращаем специальную ошибку');
         return {
           success: false,
           error: 'Извините, для вас не назначено собеседование. Пожалуйста, обратитесь к рекрутеру.'
         };
       }
       
+      console.log('🚨 Возвращаем общую ошибку:', errorMessage);
       return {
         success: false,
         error: errorMessage
       };
     }
-    */
   }
 
   /**
@@ -110,42 +99,37 @@ class CandidateAuthService {
     try {
       console.log('Starting email verification:', { email, code: verificationCode });
       
-      const response = await candidateApiService.verifyEmail({
-        firstName: '', // Не требуется для верификации
-        lastName: '',  // Не требуется для верификации
-        email
+      // Получаем данные кандидата из localStorage для верификации
+      const candidateId = this.getCandidateId();
+      if (!candidateId) {
+        throw new Error('Кандидат не найден. Сначала пройдите авторизацию.');
+      }
+
+      // Используем новый endpoint verifyCandidateEmail
+      const response = await candidateApiService.verifyCandidateEmail({
+        email,
+        verificationCode
       });
 
-      console.log('Email verification successful:', response);
+      console.log('Email verification response:', response);
 
-      // Обновляем токен если он есть
-      if (response.token) {
+      // После успешной верификации сохраняем токен
+      if (response.token && response.success) {
         localStorage.setItem(CandidateAuthService.AUTH_TOKEN_KEY, response.token);
       }
 
       return {
-        success: true,
+        success: response.success,
         candidateId: response.candidate?.id ? String(response.candidate.id) : undefined,
-        message: 'Email успешно верифицирован'
+        message: response.success ? 'Email успешно верифицирован' : 'Ошибка верификации email'
       };
     } catch (error: any) {
       console.error('Email verification failed:', error);
       
-      // Для тестирования - всегда возвращаем успешный ответ
-      console.log('🔧 TEST MODE: Returning mock successful response for email verification service');
-      return {
-        success: true,
-        candidateId: '1',
-        message: 'Email успешно верифицирован (тестовый режим)'
-      };
-      
-      // Оригинальная логика (закомментирована для тестирования):
-      /*
       return {
         success: false,
         error: error.message || 'Ошибка верификации email'
       };
-      */
     }
   }
 
@@ -228,7 +212,12 @@ class CandidateAuthService {
         throw new Error('Кандидат не авторизован');
       }
 
-      return await candidateApiService.getCandidateInfo(candidateId);
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('Токен авторизации не найден');
+      }
+
+      return await candidateApiService.getCandidateInfo(candidateId, token);
     } catch (error: any) {
       console.error('Failed to get candidate info:', error);
       throw error;
@@ -245,10 +234,89 @@ class CandidateAuthService {
         throw new Error('Кандидат не авторизован');
       }
 
-      return await candidateApiService.submitInterviewAnswer(candidateId, questionId, answer);
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('Токен авторизации не найден');
+      }
+
+      return await candidateApiService.submitInterviewAnswer(candidateId, questionId, answer, token);
     } catch (error: any) {
       console.error('Failed to submit answer:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Проверка наличия собеседования по email
+   */
+  async checkInterviewExists(email: string): Promise<{ exists: boolean, interviewId?: number, message?: string }> {
+    try {
+      console.log('Checking interview exists for email:', email);
+      
+      const response = await candidateApiService.checkInterviewExists(email);
+      console.log('Interview check response:', response);
+      
+      return {
+        exists: response.exists,
+        interviewId: response.interviewId,
+        message: response.exists ? 'Собеседование найдено' : 'Собеседование не найдено'
+      };
+    } catch (error: any) {
+      console.error('Check interview exists failed:', error);
+      
+      return {
+        exists: false,
+        message: error.message || 'Ошибка проверки собеседования'
+      };
+    }
+  }
+
+  /**
+   * Старт собеседования
+   */
+  async startInterview(interviewId: number, token: string): Promise<{ success: boolean, message?: string }> {
+    try {
+      console.log('Starting interview:', { interviewId, token: token.substring(0, 10) + '...' });
+      
+      const response = await candidateApiService.startInterview(interviewId, token);
+      console.log('Start interview response:', response);
+      
+      if (response.success) {
+        return {
+          success: true,
+          message: 'Собеседование успешно запущено'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Ошибка запуска собеседования'
+        };
+      }
+    } catch (error: any) {
+      console.error('Start interview failed:', error);
+      
+      return {
+        success: false,
+        message: error.message || 'Ошибка запуска собеседования'
+      };
+    }
+  }
+
+  // Новый метод для получения информации о вакансии
+  async getPositionSummary(positionId: number): Promise<{ 
+    id: number; 
+    title: string; 
+    department: string;
+    company: string;
+    type: string;
+    questionsCount: number 
+  }> {
+    try {
+      const response = await candidateApiService.getPositionSummary(positionId);
+      return response;
+    } catch (error: any) {
+      console.error('Error getting position summary:', error);
+      throw new Error('Не удалось получить информацию о вакансии');
     }
   }
 }

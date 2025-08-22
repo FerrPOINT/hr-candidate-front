@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CandidateAuthRequest } from '../api/models';
+import { CandidateLoginRequest } from '../api/models';
 import { apiService } from '../services/apiService';
 import { jwtDecode } from 'jwt-decode';
 import { RoleEnum } from '../api/models';
@@ -19,7 +19,7 @@ interface AuthState {
   error: string | null;
   showSessionExpiredModal: boolean;
   loginAdmin: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-  loginCandidate: (data: CandidateAuthRequest, rememberMe?: boolean) => Promise<void>;
+  loginCandidate: (data: CandidateLoginRequest, rememberMe?: boolean) => Promise<void>;
   logout: () => void;
   restoreSession: () => Promise<void>;
   showSessionExpired: () => void;
@@ -151,12 +151,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       throw error;
     }
   },
-  async loginCandidate(data: CandidateAuthRequest, rememberMe: boolean = false) {
+  async loginCandidate(data: CandidateLoginRequest, rememberMe: boolean = false) {
     const zone: AuthZone = 'candidate';
     console.log('🔍 loginCandidate - Starting login process');
     
     // Для тестирования - всегда получаем успешный ответ от API
-    const res = await apiService.getApiClient().candidates.authCandidate(data);
+    const res = await apiService.getApiClient().candidates.loginCandidate(data);
     const { token, candidate } = res.data as { token: string; candidate: Candidate };
     const payload = token ? parseJwt(token as string) : {};
 
@@ -174,7 +174,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Оригинальная логика (закомментирована для тестирования):
     /*
     try {
-      const res = await apiService.getApiClient().candidates.authCandidate(data);
+      const res = await apiService.getApiClient().candidates.loginCandidate(data);
       const { token, candidate } = res.data as { token: string; candidate: Candidate };
       const payload = token ? parseJwt(token as string) : {};
 

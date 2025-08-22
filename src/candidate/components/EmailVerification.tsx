@@ -4,6 +4,7 @@ import { Input } from './ui/input';
 import { WMTLogo } from './';
 import { HelpButton, HelpModal } from './';
 import { Mail, CheckCircle2, RefreshCw, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { candidateAuthService } from '../services/candidateAuthService';
 
 interface JobPosition {
   title: string;
@@ -15,14 +16,14 @@ interface JobPosition {
 
 interface EmailVerificationProps {
   email: string;
-  onContinue: () => void;
+  onContinue: (verificationCode: string) => void;
   onGoBack: () => void;
-  jobPosition: JobPosition;
+  interviewId: number;
 }
 
 
 
-export function EmailVerification({ email, onContinue, onGoBack, jobPosition }: EmailVerificationProps) {
+export function EmailVerification({ email, onContinue, onGoBack, interviewId }: EmailVerificationProps) {
   const [code, setCode] = useState('');
   const [isResending, setIsResending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -30,6 +31,44 @@ export function EmailVerification({ email, onContinue, onGoBack, jobPosition }: 
   const [error, setError] = useState('');
   const [sentCode] = useState('123456'); // Simulate sent code
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [jobPosition, setJobPosition] = useState<JobPosition | null>(null);
+  const [isLoadingPosition, setIsLoadingPosition] = useState(true);
+
+  // Загружаем информацию о вакансии при монтировании компонента
+  useEffect(() => {
+    const loadPositionInfo = async () => {
+      try {
+        setIsLoadingPosition(true);
+        // Получаем краткую информацию о вакансии через новый API
+        const positionSummary = await candidateAuthService.getPositionSummary(interviewId);
+        
+        // Используем полную информацию из API
+        setJobPosition({
+          title: positionSummary.title,
+          department: positionSummary.department,
+          company: positionSummary.company,
+          type: positionSummary.type,
+          questionsCount: positionSummary.questionsCount
+        });
+      } catch (error) {
+        console.error('Error loading position info:', error);
+        // В случае ошибки используем заглушку
+        setJobPosition({
+          title: 'Software Engineer',
+          department: 'Engineering',
+          company: 'WMT group',
+          type: 'Full-time',
+          questionsCount: 3
+        });
+      } finally {
+        setIsLoadingPosition(false);
+      }
+    };
+
+    if (interviewId) {
+      loadPositionInfo();
+    }
+  }, [interviewId]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -68,7 +107,7 @@ export function EmailVerification({ email, onContinue, onGoBack, jobPosition }: 
     // Simulate code verification
     if (code === sentCode) {
       // Убираем промежуточное состояние и сразу переходим к следующему этапу
-      onContinue();
+      onContinue(code);
     } else {
       setIsVerifying(false);
       setError('Неверный код. Проверьте код в письме и попробуйте снова');
@@ -127,12 +166,23 @@ export function EmailVerification({ email, onContinue, onGoBack, jobPosition }: 
                         {/* Job Position Info - centered and more compact */}
                         <div className="bg-[#e16349]/10 border border-[#e16349]/20 rounded-[20px] p-5 w-full">
                           <div className="text-center">
-                            <h4 className="text-[#e16349] mb-2">
-                              {jobPosition.title}
-                            </h4>
-                            <p className="text-gray-600">
-                              {jobPosition.company} • {jobPosition.questionsCount} вопросов
-                            </p>
+                            {isLoadingPosition ? (
+                              <div className="flex items-center justify-center">
+                                <Loader2 className="h-6 w-6 animate-spin text-[#e16349]" />
+                                <span className="ml-2 text-gray-600">Загрузка информации о вакансии...</span>
+                              </div>
+                            ) : jobPosition ? (
+                              <>
+                                <h4 className="text-[#e16349] mb-2">
+                                  {jobPosition.title}
+                                </h4>
+                                <p className="text-gray-600">
+                                  {jobPosition.company} • {jobPosition.questionsCount} вопросов
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-red-500">Ошибка загрузки информации о вакансии</p>
+                            )}
                           </div>
                         </div>
 

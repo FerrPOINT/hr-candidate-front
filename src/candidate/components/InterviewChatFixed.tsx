@@ -163,12 +163,12 @@ export function InterviewChat() {
 
   // Auth screen
   if (stage === 'auth') {
-    return <AuthForm onContinue={handleAuthComplete} jobPosition={jobPosition} />;
+    return <AuthForm onContinue={handleAuthComplete} interviewId={1} />;
   }
 
   // Email verification screen  
   if (stage === 'email-verification') {
-    return <EmailVerification email={userData?.email || ''} onContinue={handleEmailVerified} onGoBack={handleGoBackToAuth} jobPosition={jobPosition} />;
+    return <EmailVerification email={userData?.email || ''} onContinue={handleEmailVerified} onGoBack={handleGoBackToAuth} interviewId={1} />;
   }
 
   // Rules screen

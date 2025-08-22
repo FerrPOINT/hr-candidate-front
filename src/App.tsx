@@ -7,18 +7,14 @@ import CandidateApp from './candidate/App';
 import { AuthForm } from './candidate/components/AuthForm';
 import CandidateEmailVerification from './candidate/pages/CandidateEmailVerification';
 
-// Обёртка для AuthForm с моковыми данными и переходом к верификации
+// Обёртка для AuthForm с получением interviewId из URL и загрузкой информации о вакансии
 const InterviewEntry: React.FC = () => {
   const [step, setStep] = useState<'data' | 'verification'>('data');
   const [userData, setUserData] = useState<{ firstName: string; lastName: string; email: string } | null>(null);
-
-  const mockJobPosition = {
-    title: "Frontend Developer",
-    department: "Разработка",
-    company: "ВМТ Группа",
-    type: "Полная занятость",
-    questionsCount: 3
-  };
+  const location = useLocation();
+  
+  // Получаем interviewId из URL параметров
+  const interviewId = parseInt(location.pathname.split('/').pop() || '1', 10);
 
   const handleContinue = (data: { firstName: string; lastName: string; email: string }) => {
     setUserData(data);
@@ -27,11 +23,11 @@ const InterviewEntry: React.FC = () => {
 
   if (step === 'verification' && userData) {
     // Переходим на страницу верификации с параметрами email и interviewId
-    window.location.href = `/candidate/verify-email?email=${encodeURIComponent(userData.email)}&interviewId=1`;
+    window.location.href = `/candidate/verify-email?email=${encodeURIComponent(userData.email)}&interviewId=${interviewId}`;
     return null;
   }
 
-  return <AuthForm onContinue={handleContinue} jobPosition={mockJobPosition} />;
+  return <AuthForm onContinue={handleContinue} interviewId={interviewId} />;
 };
 
 // --- Новый компонент для разделения инициализации сессии ---

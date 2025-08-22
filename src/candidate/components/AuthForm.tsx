@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { WMTLogo, HelpButton, HelpModal } from './';
 import { Loader2 } from 'lucide-react';
+import { candidateAuthService } from '../services/candidateAuthService';
 
 interface JobPosition {
   title: string;
@@ -15,18 +16,54 @@ interface JobPosition {
 
 interface AuthFormProps {
   onContinue: (userData: { firstName: string; lastName: string; email: string }) => void;
-  jobPosition: JobPosition;
+  interviewId: number; // Теперь принимаем interviewId вместо готовой jobPosition
 }
 
-
-
-export function AuthForm({ onContinue, jobPosition }: AuthFormProps) {
+export function AuthForm({ onContinue, interviewId }: AuthFormProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [jobPosition, setJobPosition] = useState<JobPosition | null>(null);
+  const [isLoadingPosition, setIsLoadingPosition] = useState(true);
+
+  // Загружаем информацию о вакансии при монтировании компонента
+  useEffect(() => {
+    const loadPositionInfo = async () => {
+      try {
+        setIsLoadingPosition(true);
+        // Получаем краткую информацию о вакансии через новый API
+        const positionSummary = await candidateAuthService.getPositionSummary(interviewId);
+        
+        // Используем полную информацию из API
+        setJobPosition({
+          title: positionSummary.title,
+          department: positionSummary.department,
+          company: positionSummary.company,
+          type: positionSummary.type,
+          questionsCount: positionSummary.questionsCount
+        });
+      } catch (error) {
+        console.error('Error loading position info:', error);
+        // В случае ошибки используем заглушку
+        setJobPosition({
+          title: 'Software Engineer',
+          department: 'Engineering',
+          company: 'WMT group',
+          type: 'Full-time',
+          questionsCount: 3
+        });
+      } finally {
+        setIsLoadingPosition(false);
+      }
+    };
+
+    if (interviewId) {
+      loadPositionInfo();
+    }
+  }, [interviewId]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -87,14 +124,27 @@ export function AuthForm({ onContinue, jobPosition }: AuthFormProps) {
                           <p className="text-gray-600 mb-4">
                             Вы проходите интервью на позицию:
                           </p>
-                          <div className="rounded-[20px] p-5 mb-4" style={{ backgroundColor: 'rgba(225, 99, 73, 0.1)', border: '1px solid rgba(225, 99, 73, 0.2)' }}>
-                            <h4 className="mb-2" style={{ color: 'var(--interview-accent)' }}>
-                              {jobPosition.title}
-                            </h4>
-                            <p className="text-gray-600">
-                              {jobPosition.company} • {jobPosition.questionsCount} вопросов
-                            </p>
-                          </div>
+                          {isLoadingPosition ? (
+                            <div className="rounded-[20px] p-5 mb-4" style={{ backgroundColor: 'rgba(225, 99, 73, 0.1)', border: '1px solid rgba(225, 99, 73, 0.2)' }}>
+                              <div className="flex items-center justify-center">
+                                <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--interview-accent)' }} />
+                                <span className="ml-2 text-gray-600">Загрузка информации о вакансии...</span>
+                              </div>
+                            </div>
+                          ) : jobPosition ? (
+                            <div className="rounded-[20px] p-5 mb-4" style={{ backgroundColor: 'rgba(225, 99, 73, 0.1)', border: '1px solid rgba(225, 99, 73, 0.2)' }}>
+                              <h4 className="mb-2" style={{ color: 'var(--interview-accent)' }}>
+                                {jobPosition.title}
+                              </h4>
+                              <p className="text-gray-600">
+                                {jobPosition.company} • {jobPosition.questionsCount} вопросов
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="rounded-[20px] p-5 mb-4" style={{ backgroundColor: 'rgba(225, 99, 73, 0.1)', border: '1px solid rgba(225, 99, 73, 0.2)' }}>
+                              <p className="text-red-500">Ошибка загрузки информации о вакансии</p>
+                            </div>
+                          )}
                         </div>
 
                         {/* Form - more compact */}

@@ -31,10 +31,10 @@ const CandidateEmailVerification: React.FC = () => {
 
   // Моковые данные о вакансии
   const jobPosition: JobPosition = {
-    title: "Frontend Developer",
-    department: "Разработка",
-    company: "ВМТ Группа",
-    type: "Полная занятость",
+    title: "Software Engineer",
+    department: "Engineering",
+    company: "WMT group",
+    type: "Full-time",
     questionsCount: 3
   };
 

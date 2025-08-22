@@ -12,7 +12,7 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
 servers:
-  - url: http://localhost:8080/api/v1
+  - url: http://localhost:8081/api/v1
     description: Local server
   - url: https://api.hr-recruiter.com/api/v1
     description: Production server
@@ -378,6 +378,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /positions/{id}/summary:
+    get:
+      tags:
+        - Positions
+      summary: Get position summary
+      operationId: getPositionSummary
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Position summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionSummary'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     Position:
@@ -485,6 +512,40 @@ components:
           description: Список вопросов для вакансии (опционально)
       required:
         - title
+
+    QuestionCreateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Текст вопроса
+        type:
+          type: string
+          enum: [TEXT, CHOICE, MULTIPLE_CHOICE, RATING]
+          description: Тип вопроса
+        order:
+          type: integer
+          description: Порядок вопроса
+        isRequired:
+          type: boolean
+          description: Обязательный ли вопрос
+          default: true
+        maxDuration:
+          type: integer
+          description: Максимальная длительность ответа в секундах
+        options:
+          type: array
+          items:
+            type: string
+          description: Варианты ответов для вопросов типа CHOICE
+        evaluationCriteria:
+          type: string
+          description: Критерии оценки ответа
+      required:
+        - text
+        - type
+        - order
+
     PositionUpdateRequest:
       allOf:
         - $ref: '#/components/schemas/PositionCreateRequest'
@@ -645,6 +706,24 @@ components:
         - total
         - taskId 
 
+    PositionSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID вакансии
+        title:
+          type: string
+          description: Название вакансии
+        questionsCount:
+          type: integer
+          description: Количество вопросов в вакансии
+      required:
+        - id
+        - title
+        - questionsCount
+
     ErrorResponse:
       type: object
       properties:
@@ -669,45 +748,6 @@ components:
         - message
         - error
         - timestamp 
-
-
-
-
-
-
-
-    QuestionCreateRequest:
-      type: object
-      properties:
-        text:
-          type: string
-          description: Текст вопроса
-        type:
-          type: string
-          enum: [TEXT, CHOICE, MULTIPLE_CHOICE, RATING]
-          description: Тип вопроса
-        order:
-          type: integer
-          description: Порядок вопроса
-        isRequired:
-          type: boolean
-          description: Обязательный ли вопрос
-          default: true
-        maxDuration:
-          type: integer
-          description: Максимальная длительность ответа в секундах
-        options:
-          type: array
-          items:
-            type: string
-          description: Варианты ответов для вопросов типа CHOICE
-        evaluationCriteria:
-          type: string
-          description: Критерии оценки ответа
-      required:
-        - text
-        - type
-        - order 
 
 
 

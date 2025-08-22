@@ -44,7 +44,7 @@ describe('Candidate Flow E2E', () => {
 
     // Проверяем, что страница входа отображается корректно
     expect(screen.getByText(/добро пожаловать/i)).toBeInTheDocument();
-    expect(screen.getByText(/frontend developer/i)).toBeInTheDocument();
+    expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /wmt ai/i })).toBeInTheDocument();
 
     // Проверяем наличие всех полей формы

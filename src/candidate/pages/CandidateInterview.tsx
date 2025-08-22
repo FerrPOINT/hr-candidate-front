@@ -57,8 +57,14 @@ const CandidateInterview: React.FC = () => {
       setError(null);
 
       try {
+        // Получаем токен для авторизованных запросов
+        const token = candidateAuthService.getToken();
+        if (!token) {
+          throw new Error('Токен авторизации не найден');
+        }
+
         // Получаем информацию об интервью
-        const interviewInfo = await candidateApiService.getInterviewInfo(id);
+        const interviewInfo = await candidateApiService.getInterviewInfo(id, token);
         
         const data: InterviewData = {
           interviewId: id,
@@ -127,8 +133,14 @@ const CandidateInterview: React.FC = () => {
   const handleNextQuestion = useCallback(async () => {
     if (currentQuestion < totalQuestions && interviewData) {
       try {
+        // Получаем токен для авторизованных запросов
+        const token = candidateAuthService.getToken();
+        if (!token) {
+          throw new Error('Токен авторизации не найден');
+        }
+
         // Получаем следующий вопрос через API
-        const nextQuestion = await candidateApiService.getNextVoiceQuestion(interviewData.interviewId);
+        const nextQuestion = await candidateApiService.getNextVoiceQuestion(interviewData.interviewId, token);
         
         setInterviewData(prev => ({
           ...prev!,
@@ -149,8 +161,14 @@ const CandidateInterview: React.FC = () => {
   const handleFinishInterview = useCallback(async () => {
     if (interviewData) {
       try {
+        // Получаем токен для авторизованных запросов
+        const token = candidateAuthService.getToken();
+        if (!token) {
+          throw new Error('Токен авторизации не найден');
+        }
+
         // Завершаем voice интервью через API
-        await candidateApiService.finishVoiceInterview(interviewData.interviewId);
+        await candidateApiService.finishVoiceInterview(interviewData.interviewId, token);
         console.log('Интервью завершено');
         navigate('/complete');
       } catch (error: any) {
@@ -163,11 +181,17 @@ const CandidateInterview: React.FC = () => {
   const handleStartInterview = useCallback(async () => {
     if (interviewData) {
       try {
+        // Получаем токен для авторизованных запросов
+        const token = candidateAuthService.getToken();
+        if (!token) {
+          throw new Error('Токен авторизации не найден');
+        }
+
         // Начинаем voice интервью через API
-        await candidateApiService.startVoiceInterview(interviewData.interviewId);
+        await candidateApiService.startVoiceInterview(interviewData.interviewId, token);
         
         // Получаем первый вопрос
-        const firstQuestion = await candidateApiService.getNextVoiceQuestion(interviewData.interviewId);
+        const firstQuestion = await candidateApiService.getNextVoiceQuestion(interviewData.interviewId, token);
         
         setInterviewData(prev => ({
           ...prev!,

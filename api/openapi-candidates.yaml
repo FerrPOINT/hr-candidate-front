@@ -88,40 +88,88 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Candidate'
-  /candidates/auth:
+  /candidates/login:
     post:
-      operationId: authCandidate
+      operationId: loginCandidate
       tags:
         - Candidates
-      summary: Авторизация кандидата (Публичный endpoint)
+      summary: Логин кандидата (Публичный endpoint)
       description: |
-        Публичный endpoint для find-or-create кандидата и получения JWT.
+        Публичный endpoint для логина кандидата.
         Доступно без авторизации.
         
-        **Безопасность:**
-        - Требуется указать positionId вакансии
-        - Проверяется наличие активного интервью для кандидата в указанной вакансии
-        - JWT выдается только после подтверждения email
+        **Бизнес-логика:**
+        1. Проверка существования вакансии по positionId
+        2. Поиск или создание кандидата
+        3. Проверка наличия активного собеседования для этой вакансии
+        4. Отправка кода верификации на email
         
-        Возвращает JWT для кандидата и его DTO.
+        **Безопасность:**
+        - Требуется указать positionId вакансии (НЕ собеседования)
+        - Проверяется наличие активного собеседования
+        - Код верификации отправляется на email
+        
+        Возвращает данные кандидата и флаг необходимости верификации.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CandidateAuthRequest'
+              $ref: '#/components/schemas/CandidateLoginRequest'
       responses:
         '200':
-          description: Успешная авторизация кандидата
+          description: Успешный логин, требуется верификация email
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CandidateAuthResponse'
+                $ref: '#/components/schemas/CandidateLoginResponse'
         '400':
           description: Неверные параметры запроса
         '500':
           description: Внутренняя ошибка сервера
       security: []
+
+  /candidates/verify-email:
+    post:
+      operationId: verifyCandidateEmail
+      tags:
+        - Candidates
+      summary: Верификация email кандидата (Публичный endpoint)
+      description: |
+        Публичный endpoint для верификации email кандидата.
+        Доступно без авторизации.
+        
+        **Бизнес-логика:**
+        1. Проверка кода верификации
+        2. Подтверждение email кандидата
+        3. Генерация JWT токена для авторизованного доступа
+        
+        **Безопасность:**
+        - Требуется корректный код верификации
+        - Email подтверждается только после успешной проверки кода
+        - JWT выдается только верифицированным кандидатам
+        
+        Возвращает JWT токен для дальнейшей авторизации.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidateEmailVerificationRequest'
+      responses:
+        '200':
+          description: Email успешно верифицирован, JWT токен выдан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateEmailVerificationResponse'
+        '400':
+          description: Неверный код верификации
+        '500':
+          description: Внутренняя ошибка сервера
+      security: []
+
+
   /candidates/{id}:
     get:
       operationId: getCandidate
@@ -257,42 +305,7 @@ components:
       required:
         - id
         - createdAt
-    Candidate:
-      type: object
-      properties:
-        id:
-          type: integer
-        firstName:
-          type: string
-        lastName:
-          type: string
-        email:
-          type: string
-        status:
-          $ref: '#/components/schemas/CandidateStatusEnum'
-        resumeUrl:
-          type: string
-        coverLetter:
-          type: string
-        experienceYears:
-          type: integer
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        skills:
-          type: array
-          items:
-            type: string
-      required:
-        - id
-        - firstName
-        - lastName
-        - status
-        - createdAt
-        - updatedAt
+
     CandidateCreateRequest:
       type: object
       properties:
@@ -327,7 +340,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Candidate'
-    CandidateAuthRequest:
+    CandidateLoginRequest:
       type: object
       required:
         - firstName
@@ -337,19 +350,115 @@ components:
       properties:
         firstName:
           type: string
+          description: Имя кандидата
         lastName:
           type: string
+          description: Фамилия кандидата
         email:
           type: string
           format: email
+          description: Email кандидата для логина
         positionId:
           type: integer
           format: int64
-          description: ID вакансии для логина (обязательно для безопасности)
+          description: ID вакансии (НЕ собеседования) для проверки доступа
+
+    CandidateEmailVerificationRequest:
+      type: object
+      required:
+        - email
+        - verificationCode
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email кандидата для верификации
         verificationCode:
           type: string
           maxLength: 16
-          description: Optional email verification code if already sent
+          description: Код верификации, отправленный на email
+
+    CandidateLoginResponse:
+      type: object
+      required:
+        - candidate
+        - verificationRequired
+      properties:
+        candidate:
+          $ref: '#/components/schemas/Candidate'
+          description: Данные кандидата
+        verificationRequired:
+          type: boolean
+          description: true - требуется верификация email, false - email уже верифицирован
+        message:
+          type: string
+          description: Информационное сообщение для пользователя
+
+    CandidateEmailVerificationResponse:
+      type: object
+      required:
+        - success
+        - candidate
+      properties:
+        success:
+          type: boolean
+          description: true - верификация успешна, false - верификация не удалась
+        candidate:
+          $ref: '#/components/schemas/Candidate'
+          description: Данные кандидата
+        token:
+          type: string
+          description: JWT токен для авторизованного доступа (только при успешной верификации)
+        message:
+          type: string
+          description: Информационное сообщение о результате верификации
+
+
+    Candidate:
+      allOf:
+        - $ref: '#/components/schemas/BaseCandidateFields'
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор кандидата
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата создания записи
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата последнего обновления
+        emailVerified:
+          type: boolean
+          description: Статус верификации email
+        emailVerificationCode:
+          type: string
+          description: Код верификации email
+        emailVerificationExpiresAt:
+          type: string
+          format: date-time
+          description: Время истечения кода верификации
+        lastCodeSentAt:
+          type: string
+          format: date-time
+          description: Время последней отправки кода
+        codeAttempts:
+          type: integer
+          description: Количество попыток ввода кода
+        blockedUntil:
+          type: string
+          format: date-time
+          description: Время блокировки аккаунта
+      required:
+        - id
+        - firstName
+        - lastName
+        - status
+        - emailVerified
+
     BaseCandidateFields:
       type: object
       properties:
@@ -377,19 +486,7 @@ components:
           items:
             type: string
           description: Навыки кандидата
-    CandidateAuthResponse:
-      type: object
-      required:
-        - candidate
-      properties:
-        token:
-          type: string
-          description: JWT токен для авторизации кандидата (present only when verified)
-        verificationRequired:
-          type: boolean
-          description: true if email needs verification
-        candidate:
-          $ref: '#/components/schemas/Candidate'
+
     CandidateStatusEnum:
       type: string
       enum:

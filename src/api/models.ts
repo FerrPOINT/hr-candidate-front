@@ -33,8 +33,10 @@ export type { Candidate } from '../../generated-src/client/models/candidate';
 export type { CandidateCreateRequest } from '../../generated-src/client/models/candidate-create-request';
 export type { CandidateUpdateRequest } from '../../generated-src/client/models/candidate-update-request';
 export type { CandidatesPaginatedResponse } from '../../generated-src/client/models/candidates-paginated-response';
-export type { CandidateAuthRequest } from '../../generated-src/client/models/candidate-auth-request';
-export type { CandidateAuthResponse } from '../../generated-src/client/models/candidate-auth-response';
+export type { CandidateLoginRequest } from '../../generated-src/client/models/candidate-login-request';
+export type { CandidateLoginResponse } from '../../generated-src/client/models/candidate-login-response';
+export type { CandidateEmailVerificationRequest } from '../../generated-src/client/models/candidate-email-verification-request';
+export type { CandidateEmailVerificationResponse } from '../../generated-src/client/models/candidate-email-verification-response';
 
 // Widened Interview type to include optional legacy fields used in UI
 export type Interview = import('../../generated-src/client/models/interview').Interview & {
