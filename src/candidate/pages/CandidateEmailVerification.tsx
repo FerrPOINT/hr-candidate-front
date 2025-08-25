@@ -27,7 +27,8 @@ const CandidateEmailVerification: React.FC = () => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   
   const email = searchParams.get('email') || '';
-  const interviewId = searchParams.get('interviewId') || '1';
+  // Не подставляем дефолт 1 — используем только переданный id
+  const interviewId = searchParams.get('interviewId') || '';
 
   // Моковые данные о вакансии
   const jobPosition: JobPosition = {
@@ -67,6 +68,12 @@ const CandidateEmailVerification: React.FC = () => {
       return;
     }
 
+    // Проверяем корректность interviewId
+    if (!interviewId || isNaN(parseInt(interviewId, 10))) {
+      setError('Некорректный или отсутствующий interviewId');
+      return;
+    }
+
     setIsVerifying(true);
     
     try {
@@ -75,6 +82,7 @@ const CandidateEmailVerification: React.FC = () => {
       
       if (response.success) {
         console.log('Email verification successful:', response);
+        // После верификации идем на интервью (welcome сообщения загрузятся там)
         navigate(`/candidate/interview/${interviewId}`);
       } else {
         console.error('Email verification failed:', response.error);

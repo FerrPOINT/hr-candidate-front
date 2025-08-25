@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from './';
 import { HelpModal, HelpButton, WMTLogo } from './';
 import { InstructionsModal } from './InstructionsModal';
@@ -9,6 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Import types and utilities
 import { ProcessStage, AIMessage, QuestionCard } from './interview/types';
 import { processQuestions, readingText } from './interview/constants';
+import { apiClient } from '../../api/apiClient';
+import { getFullAudioUrl, logAudioUrl } from '../../utils/audioUtils';
 import { createQuestionCard, markQuestionAsCompleted, updateQuestionTime } from './interview/utils';
 
 // Import components
@@ -36,19 +39,32 @@ export function InterviewProcess() {
   const [isAISpeaking, setIsAISpeaking] = useState(true);
   const [showMicrophoneCard, setShowMicrophoneCard] = useState(false);
   const [timerStarted, setTimerStarted] = useState(false);
+  const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
+  const [currentQuestionNumber, setCurrentQuestionNumber] = useState<number | null>(null);
+  const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null);
   
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const skipQuestionFnRef = useRef<(() => void) | null>(null);
 
-  // Мемоизированные welcome сообщения
-  const welcomeMessages = useMemo(() => [
-    { id: '1', content: 'Привет !', isVisible: false },
-    { id: '2', content: 'Я твой виртуальный интервьюер.', isVisible: false },
-    { id: '3', content: 'Я запрограммирована оценить твои знания с помощью ряда фундаментальных вопросов. Для ответа на каждый вопрос у тебя будет 2 минуты 30 секунд.', isVisible: false },
-    { id: '4', content: 'Чтобы записать ответ, нужно будет использовать микрофон. Давай проверим, что он включен и работает.', isVisible: false }
-  ], []);
+  // Аудио воспроизведение welcome-сообщений из API
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const welcomeQueueRef = useRef<{ id: string; text: string; audioUrl?: string }[]>([]);
+  const completionQueueRef = useRef<{ id: string; text: string; audioUrl?: string }[]>([]);
+
+  // Получаем interviewId из URL (без изменения роутинга)
+  const location = useLocation();
+  const interviewId = useMemo(() => {
+    const parts = location.pathname.split('/');
+    const idx = parts.indexOf('interview');
+    if (idx !== -1 && parts[idx + 1]) {
+      const parsed = parseInt(parts[idx + 1], 10);
+      return Number.isFinite(parsed) ? parsed : 1;
+    }
+    return 1;
+  }, [location.pathname]);
 
   // НАДЕЖНАЯ функция автоскролла с несколькими попытками
   const scrollToBottom = useCallback(() => {
@@ -73,69 +89,107 @@ export function InterviewProcess() {
     setTimeout(scroll, 200);
   }, []);
 
-  // Initialize welcome messages
+  // Initialize welcome messages from API with audio sequencing
   useEffect(() => {
-    console.log('🟢 InterviewProcess: Initializing welcome messages');
-    
-    setMessages(welcomeMessages);
-    setCurrentMessageIndex(0);
-    setIsAISpeaking(true);
-    setShowMicrophoneCard(false);
-    
-    const showNextMessage = (index: number) => {
-      console.log(`📝 Showing message ${index + 1}/${welcomeMessages.length}`);
-      
-      if (index < welcomeMessages.length) {
-        setMessages(prev => prev.map((msg, i) => 
-          i === index ? { ...msg, isVisible: true, isNew: true } : msg
-        ));
-        setCurrentMessageIndex(index);
-        
-        // Скролл после сообщения
-        scrollToBottom();
-        
-        setTimeout(() => {
-          setMessages(prev => prev.map((msg, i) => 
-            i === index ? { ...msg, isNew: false } : msg
-          ));
-        }, 500);
-        
-        const delay = Math.max(1000, welcomeMessages[index].content.length * 50);
-        messageTimerRef.current = setTimeout(() => {
-          showNextMessage(index + 1);
-        }, delay);
-      } else {
-        console.log('📝 All messages shown, adding microphone card to messages');
-        messageTimerRef.current = setTimeout(() => {
-          const microphoneCard = { 
-            id: 'microphone-card', 
-            content: 'microphone-card', 
-            isVisible: true, 
-            isNew: true,
-            type: 'microphone-card'
-          } as any;
-          setMessages(prev => [...prev, microphoneCard]);
-          setShowMicrophoneCard(true);
-          setIsAISpeaking(false);
-          
-          // Агрессивный скролл после добавления карточки
-          setTimeout(() => scrollToBottom(), 10);
-          setTimeout(() => scrollToBottom(), 100);
-          setTimeout(() => scrollToBottom(), 300);
-        }, 1000);
+    let isCancelled = false;
+    const loadAndPlayWelcome = async () => {
+      try {
+        setIsAISpeaking(true);
+        setShowMicrophoneCard(false);
+        setMessages([]);
+        const resp = await apiClient.candidates.getWelcomeMessages();
+        if (isCancelled) return;
+        const items = (resp.data?.messages || []).map((m, idx) => ({ id: `welcome-${idx}`, text: m.text || '', audioUrl: m.audioUrl }));
+        welcomeQueueRef.current = items;
+
+        const playIndex = async (index: number) => {
+          if (isCancelled) return;
+          if (index >= welcomeQueueRef.current.length) {
+            // After all messages, show microphone card
+            const microphoneCard = { 
+              id: 'microphone-card', 
+              content: 'microphone-card', 
+              isVisible: true, 
+              isNew: true,
+              type: 'microphone-card'
+            } as any;
+            setMessages(prev => [...prev, microphoneCard]);
+            setShowMicrophoneCard(true);
+            setIsAISpeaking(false);
+            // Scroll updates
+            setTimeout(() => scrollToBottom(), 10);
+            setTimeout(() => scrollToBottom(), 100);
+            setTimeout(() => scrollToBottom(), 300);
+            return;
+          }
+
+          const item = welcomeQueueRef.current[index];
+          setCurrentMessageIndex(index);
+          // Show message bubble
+          setMessages(prev => [...prev, { id: item.id, content: item.text, isVisible: true, isNew: true } as any]);
+          setTimeout(() => setMessages(prev => prev.map(m => (m.id === item.id ? { ...m, isNew: false } : m))), 500);
+          scrollToBottom();
+
+          // Play audio if available
+          if (item.audioUrl) {
+            const fullUrl = getFullAudioUrl(item.audioUrl);
+            logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Welcome');
+            try {
+              if (audioRef.current) {
+                audioRef.current.pause();
+              }
+              const audio = new Audio(fullUrl);
+              audioRef.current = audio;
+              setIsAISpeaking(true);
+              audio.onended = () => {
+                setIsAISpeaking(false);
+                playIndex(index + 1);
+              };
+              audio.onerror = () => {
+                setIsAISpeaking(false);
+                playIndex(index + 1);
+              };
+              await audio.play();
+            } catch (e) {
+              setIsAISpeaking(false);
+              playIndex(index + 1);
+            }
+          } else {
+            // No audio — proceed immediately
+            setIsAISpeaking(false);
+            playIndex(index + 1);
+          }
+        };
+
+        playIndex(0);
+      } catch (e) {
+        // On failure, don't block UI: show microphone card
+        const microphoneCard = { 
+          id: 'microphone-card', 
+          content: 'microphone-card', 
+          isVisible: true, 
+          isNew: true,
+          type: 'microphone-card'
+        } as any;
+        setMessages(prev => [...prev, microphoneCard]);
+        setShowMicrophoneCard(true);
+        setIsAISpeaking(false);
       }
     };
 
-    messageTimerRef.current = setTimeout(() => {
-      showNextMessage(0);
-    }, 1000);
-
+    loadAndPlayWelcome();
     return () => {
+      isCancelled = true;
       if (messageTimerRef.current) {
         clearTimeout(messageTimerRef.current);
       }
+      if (audioRef.current) {
+        audioRef.current.onended = null;
+        audioRef.current.onerror = null;
+        audioRef.current.pause();
+      }
     };
-  }, [welcomeMessages, scrollToBottom]);
+  }, [scrollToBottom]);
 
   // Простой автоскролл при изменении контента
   useEffect(() => {
@@ -156,52 +210,10 @@ export function InterviewProcess() {
         });
       }, 1000);
     } else if (timeRemaining === 0 && (stage === 'question' || stage === 'recording-answer') && timerStarted) {
-      // Время истекло - переходим к следующему вопросу
+      // Время истекло — действуем как «пропуск вопроса»
       console.log('⏰ Time up for question', currentQuestionIndex + 1);
-      
-             if (currentQuestionIndex < processQuestions.length - 1) {
-         const nextIndex = currentQuestionIndex + 1;
-         setCurrentQuestionIndex(nextIndex);
-         setTimeRemaining(150);
-         setStage('question');
-         setIsAISpeaking(true);
-         setTimerStarted(true); // Запускаем таймер сразу
-         
-         // Добавляем следующий вопрос
-         const newQuestionCard = createQuestionCard(nextIndex, processQuestions);
-         setQuestionCards(prev => [...prev, newQuestionCard]);
-         
-         const questionCardMsg = { 
-           id: `question-card-${nextIndex}`, 
-           content: `question-card-${nextIndex}`, 
-           isVisible: true, 
-           isNew: true,
-           type: 'question-card',
-           questionCard: newQuestionCard
-         } as any;
-         setMessages(prev => [...prev, questionCardMsg]);
-         
-         // Агрессивный скролл после добавления карточки
-         setTimeout(() => scrollToBottom(), 10);
-         setTimeout(() => scrollToBottom(), 100);
-         setTimeout(() => scrollToBottom(), 300);
-         
-         setTimeout(() => {
-           setQuestionCards(prev => prev.map(card =>
-             card.id === newQuestionCard.id ? { ...card, isNew: false } : card
-           ));
-           setMessages(prev => prev.map(msg => 
-             msg.id === `question-card-${nextIndex}` ? { ...msg, isNew: false } : msg
-           ));
-         }, 500);
-         
-         setTimeout(() => {
-           setIsAISpeaking(false);
-         }, 2000);
-      } else {
-        console.log('✅ All questions completed, moving to candidate questions');
-        setStage('candidate-questions');
-        setIsAISpeaking(false);
+      if (skipQuestionFnRef.current) {
+        skipQuestionFnRef.current();
       }
     }
 
@@ -212,9 +224,10 @@ export function InterviewProcess() {
     };
   }, [timeRemaining, stage, timerStarted, currentQuestionIndex]);
 
-  const addQuestionCard = useCallback((questionIndex: number) => {
+  const addQuestionCard = useCallback((questionIndex: number, textOverride?: string) => {
     console.log(`➕ Adding question card ${questionIndex + 1}`);
-    const newQuestionCard = createQuestionCard(questionIndex, processQuestions);
+    const base = createQuestionCard(questionIndex, processQuestions);
+    const newQuestionCard = { ...base, text: textOverride ?? base.text } as QuestionCard;
     setQuestionCards(prev => [...prev, newQuestionCard]);
     
     // Добавляем question card в сообщения
@@ -342,22 +355,86 @@ export function InterviewProcess() {
     }, 2000);
   }, []);
 
-  const handleStartInterview = useCallback(() => {
+  const handleStartInterview = useCallback(async () => {
     console.log('🚀 Starting interview');
     setIsInstructionsModalOpen(false);
     setStage('question');
     setTimeRemaining(150);
     setCurrentQuestionIndex(0);
     setIsAISpeaking(true);
-    setTimerStarted(true); // Запускаем таймер сразу
-    
-    addQuestionCard(0);
-    
-    setTimeout(() => {
-      setIsAISpeaking(false);
-      console.log('⏰ Timer started for question 1');
-    }, 2000);
-  }, [addQuestionCard]);
+    setTimerStarted(false); // Запускаем таймер после озвучки вопроса
+
+    const fetchAndPlay = async () => {
+      try {
+        // Явно запускаем интервью перед первым вопросом (если уже запущено — сервер вернет ок/ошибку, мы продолжаем)
+        try { await apiClient.candidates.startInterviewForCandidate(interviewId); } catch {}
+        const { data } = await apiClient.candidates.getCurrentQuestion(interviewId);
+        if (!data || !data.questionId) {
+          try { await apiClient.candidates.endInterview(interviewId); } catch {}
+          const completion = (await apiClient.candidates.getCompletionMessages()).data as any;
+          const items = (completion?.messages || []).map((m: any, idx: number) => ({ id: `completion-${idx}`, text: m?.text || '', audioUrl: m?.audioUrl }));
+          completionQueueRef.current = items;
+          const playCompletion = async (idx: number) => {
+            if (idx >= completionQueueRef.current.length) return;
+            const item = completionQueueRef.current[idx];
+            setMessages(prev => [...prev, { id: item.id, content: item.text, isVisible: true, isNew: true } as any]);
+            setTimeout(() => setMessages(prev => prev.map(m => (m.id === item.id ? { ...m, isNew: false } : m))), 500);
+            scrollToBottom();
+            if (item.audioUrl) {
+              try {
+                const fullUrl = getFullAudioUrl(item.audioUrl);
+                logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Completion');
+                if (audioRef.current) audioRef.current.pause();
+                const audio = new Audio(fullUrl);
+                audioRef.current = audio;
+                setIsAISpeaking(true);
+                audio.onended = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
+                audio.onerror = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
+                await audio.play();
+              } catch {
+                setIsAISpeaking(false);
+                playCompletion(idx + 1);
+              }
+            } else {
+              setIsAISpeaking(false);
+              playCompletion(idx + 1);
+            }
+          };
+          playCompletion(0);
+          return;
+        }
+
+        setCurrentQuestionId(data.questionId || null);
+        const qNum = (data.questionNumber ?? 1) - 1;
+        setCurrentQuestionNumber(data.questionNumber || 1);
+        setTotalQuestions(data.totalQuestions || null);
+        setCurrentQuestionIndex(Math.max(0, qNum));
+        addQuestionCard(Math.max(0, qNum), data.text || '');
+        const cardId = `question-card-${Math.max(0, qNum)}`;
+        setTimeout(() => setQuestionCards(prev => prev.map(card => card.id === cardId ? { ...card, isNew: false } : card)), 500);
+        scrollToBottom();
+
+        if (data.audioUrl) {
+          try {
+            const fullUrl = getFullAudioUrl(data.audioUrl);
+            logAudioUrl(data.audioUrl, fullUrl, 'InterviewProcess:Question');
+            if (audioRef.current) audioRef.current.pause();
+            const audio = new Audio(fullUrl);
+            audioRef.current = audio;
+            setIsAISpeaking(true);
+            audio.onended = () => { setIsAISpeaking(false); setTimerStarted(true); };
+            audio.onerror = () => { setIsAISpeaking(false); setTimerStarted(true); };
+            await audio.play();
+          } catch { setIsAISpeaking(false); setTimerStarted(true); }
+        } else {
+          setIsAISpeaking(false);
+          setTimerStarted(true);
+        }
+      } catch {}
+    };
+
+    fetchAndPlay();
+  }, [addQuestionCard, interviewId, scrollToBottom]);
 
   const handleRecordAnswer = useCallback(() => {
     console.log('🎙️ Starting to record answer for question', currentQuestionIndex + 1);
@@ -367,30 +444,94 @@ export function InterviewProcess() {
     // НЕ трогаем таймер - он должен продолжать работать как есть
   }, [currentQuestionIndex]);
 
-  const handleSkipQuestion = useCallback(() => {
+  const handleSkipQuestion = useCallback(async () => {
     console.log(`⏭️ Skipping question ${currentQuestionIndex + 1}`);
     completeQuestion(currentQuestionIndex);
-    
-         if (currentQuestionIndex < processQuestions.length - 1) {
-       const nextIndex = currentQuestionIndex + 1;
-       setCurrentQuestionIndex(nextIndex);
-       setTimeRemaining(150);
-       setStage('question');
-       setIsAISpeaking(true);
-       setTimerStarted(true); // Запускаем таймер сразу
-       
-       addQuestionCard(nextIndex);
-       
-       setTimeout(() => {
-         setIsAISpeaking(false);
-         console.log('⏰ Timer started for question', nextIndex + 1);
-       }, 2000);
-    } else {
-      console.log('✅ All questions completed, moving to candidate questions');
-      setStage('candidate-questions');
+    setTimerStarted(false);
+    setTimeRemaining(150);
+    try {
+      const emptyBlob = new Blob([new Uint8Array(1)], { type: 'audio/wav' });
+      const file = new File([emptyBlob], 'empty.wav', { type: 'audio/wav' });
+      if (currentQuestionId != null) {
+        await apiClient.candidates.submitAnswer(interviewId, currentQuestionId, file);
+      }
+    } catch {}
+
+    try {
+      const { data } = await apiClient.candidates.getCurrentQuestion(interviewId);
+      if (!data || !data.questionId) {
+        try { await apiClient.candidates.endInterview(interviewId); } catch {}
+        const completion = (await apiClient.candidates.getCompletionMessages()).data as any;
+        const items = (completion?.messages || []).map((m: any, idx: number) => ({ id: `completion-${idx}`, text: m?.text || '', audioUrl: m?.audioUrl }));
+        completionQueueRef.current = items;
+        const playCompletion = async (idx: number) => {
+          if (idx >= completionQueueRef.current.length) return;
+          const item = completionQueueRef.current[idx];
+          setMessages(prev => [...prev, { id: item.id, content: item.text, isVisible: true, isNew: true } as any]);
+          setTimeout(() => setMessages(prev => prev.map(m => (m.id === item.id ? { ...m, isNew: false } : m))), 500);
+          scrollToBottom();
+          if (item.audioUrl) {
+            try {
+              const fullUrl = getFullAudioUrl(item.audioUrl);
+              logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Completion');
+              if (audioRef.current) audioRef.current.pause();
+              const audio = new Audio(fullUrl);
+              audioRef.current = audio;
+              setIsAISpeaking(true);
+              audio.onended = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
+              audio.onerror = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
+              await audio.play();
+            } catch {
+              setIsAISpeaking(false);
+              playCompletion(idx + 1);
+            }
+          } else {
+            setIsAISpeaking(false);
+            playCompletion(idx + 1);
+          }
+        };
+        playCompletion(0);
+        return;
+      }
+
+      setCurrentQuestionId(data.questionId || null);
+      const qNumber = (data.questionNumber ?? (currentQuestionIndex + 2)) - 1;
+      setCurrentQuestionNumber(data.questionNumber || (qNumber + 1));
+      setTotalQuestions(data.totalQuestions || totalQuestions);
+      setCurrentQuestionIndex(Math.max(0, qNumber));
+      addQuestionCard(Math.max(0, qNumber), data.text || '');
+      const cardId = `question-card-${Math.max(0, qNumber)}`;
+      setTimeout(() => setQuestionCards(prev => prev.map(card => card.id === cardId ? { ...card, isNew: false } : card)), 500);
+      scrollToBottom();
+
       setIsAISpeaking(false);
-    }
-  }, [currentQuestionIndex, completeQuestion, addQuestionCard]);
+      setTimerStarted(false);
+      setTimeRemaining(150);
+      if (data.audioUrl) {
+        try {
+          const fullUrl = getFullAudioUrl(data.audioUrl);
+          logAudioUrl(data.audioUrl, fullUrl, 'InterviewProcess:Question');
+          if (audioRef.current) audioRef.current.pause();
+          const audio = new Audio(fullUrl);
+          audioRef.current = audio;
+          setIsAISpeaking(true);
+          audio.onended = () => { setIsAISpeaking(false); setTimerStarted(true); };
+          audio.onerror = () => { setIsAISpeaking(false); setTimerStarted(true); };
+          await audio.play();
+        } catch {
+          setIsAISpeaking(false);
+          setTimerStarted(true);
+        }
+      } else {
+        setTimerStarted(true);
+      }
+    } catch {}
+  }, [currentQuestionIndex, completeQuestion, addQuestionCard, currentQuestionId, interviewId, totalQuestions, scrollToBottom]);
+
+  // Даем таймеру доступ к логике пропуска
+  useEffect(() => {
+    skipQuestionFnRef.current = () => { void handleSkipQuestion(); };
+  }, [handleSkipQuestion]);
 
   const handleStopRecording = useCallback(() => {
     console.log('⏹️ Stopping recording for question', currentQuestionIndex + 1);
