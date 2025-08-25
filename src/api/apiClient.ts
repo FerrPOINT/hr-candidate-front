@@ -1,35 +1,12 @@
 import { Configuration } from '../../generated-src/client/configuration';
-import { AuthApi } from '../../generated-src/client/apis/auth-api';
-import { AccountApi } from '../../generated-src/client/apis/account-api';
 import { CandidatesApi } from '../../generated-src/client/apis/candidates-api';
-import { InterviewsApi } from '../../generated-src/client/apis/interviews-api';
-import { PositionsApi } from '../../generated-src/client/apis/positions-api';
-import { QuestionsApi } from '../../generated-src/client/apis/questions-api';
-import { TeamUsersApi } from '../../generated-src/client/apis/team-users-api';
-import { AnalyticsReportsApi } from '../../generated-src/client/apis/analytics-reports-api';
-import { SettingsApi } from '../../generated-src/client/apis/settings-api';
-import { AIApi } from '../../generated-src/client/apis/aiapi';
-import { VoiceApi } from '../../generated-src/client/apis/voice-api';
-import { VoiceInterviewsApi } from '../../generated-src/client/apis/voice-interviews-api';
-import { GenerationApi } from '../../generated-src/client/apis/generation-api';
+// В распоряжении только кандидаты
 // Professional: Always import the auth store for token access
 import { useAuthStore } from '../store/authStore';
 import axios from 'axios';
 
 export interface ApiClient {
-    auth: AuthApi;
-    account: AccountApi;
     candidates: CandidatesApi;
-    interviews: InterviewsApi;
-    positions: PositionsApi;
-    questions: QuestionsApi;
-    teamUsers: TeamUsersApi;
-    analyticsReports: AnalyticsReportsApi;
-    settings: SettingsApi;
-    ai: AIApi;
-    voice: VoiceApi;
-    voiceInterviews: VoiceInterviewsApi;
-    generation: GenerationApi;
 }
 
 // Helper to get sanitized API base and path
@@ -99,19 +76,7 @@ export function createApiClient(
     });
 
     return {
-        auth: new AuthApi(config),
-        account: new AccountApi(config),
-        candidates: new CandidatesApi(config),
-        interviews: new InterviewsApi(config),
-        positions: new PositionsApi(config),
-        questions: new QuestionsApi(config),
-        teamUsers: new TeamUsersApi(config),
-        analyticsReports: new AnalyticsReportsApi(config),
-        settings: new SettingsApi(config),
-        ai: new AIApi(config),
-        voice: new VoiceApi(config),
-        voiceInterviews: new VoiceInterviewsApi(config),
-        generation: new GenerationApi(config)
+        candidates: new CandidatesApi(config)
     };
 }
 

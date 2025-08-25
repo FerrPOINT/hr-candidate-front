@@ -2,13 +2,12 @@ import { create } from 'zustand';
 import { CandidateLoginRequest } from '../api/models';
 import { apiService } from '../services/apiService';
 import { jwtDecode } from 'jwt-decode';
-import { RoleEnum } from '../api/models';
-import type { User, Candidate } from '../api/models';
+import type { Candidate } from '../api/models';
 
-export type UserRole = RoleEnum | 'CANDIDATE' | null;
+export type UserRole = 'CANDIDATE' | null;
 export type AuthZone = 'crm' | 'candidate';
 
-type AuthUser = User | Candidate | null;
+type AuthUser = Candidate | null;
 
 interface AuthState {
   token: string | null;
@@ -126,48 +125,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true, // Initialize loading to true
   error: null,
   showSessionExpiredModal: false,
-  async loginAdmin(email: string, password: string, rememberMe: boolean = false) {
-    try {
-      const zone: AuthZone = 'crm';
-      console.log('🔍 loginAdmin - Starting login process');
-      const res = await apiService.getApiClient().auth.login({ email, password });
-      const { token, user } = res.data as { token: string; user: User };
-      const payload = token ? parseJwt(token as string) : {};
-
-      console.log('🔍 loginAdmin - Token received:', token ? `${token.substring(0, 20)}...` : 'null');
-      console.log('🔍 loginAdmin - Token payload:', payload);
-
-      if (token) {
-        saveAuthData(token as string, user, (payload.role as string) || RoleEnum.ADMIN, rememberMe, zone);
-      }
-
-      set({ token, user, role: (payload.role as UserRole) || RoleEnum.ADMIN, isAuth: true, error: null });
-      apiService.refreshApiClient();
-      console.log('🔍 loginAdmin - Login completed successfully');
-    } catch (e: unknown) {
-      const error = e instanceof Error ? e : { message: 'Ошибка авторизации' };
-      console.error('🔍 loginAdmin - Login failed:', error);
-      set({ error: (error as Error).message || 'Ошибка авторизации', isAuth: false });
-      throw error;
-    }
-  },
+  async loginAdmin() { throw new Error('Admin auth is not available'); },
   async loginCandidate(data: CandidateLoginRequest, rememberMe: boolean = false) {
     const zone: AuthZone = 'candidate';
     console.log('🔍 loginCandidate - Starting login process');
     
     // Для тестирования - всегда получаем успешный ответ от API
     const res = await apiService.getApiClient().candidates.loginCandidate(data);
-    const { token, candidate } = res.data as { token: string; candidate: Candidate };
-    const payload = token ? parseJwt(token as string) : {};
-
-    console.log('🔍 loginCandidate - Token received:', token ? `${token.substring(0, 20)}...` : 'null');
-    console.log('🔍 loginCandidate - Token payload:', payload);
-
-    if (token) {
-      saveAuthData(token as string, candidate, (payload.role as string) || 'CANDIDATE', rememberMe, zone);
+    const candidateResp = res.data as any;
+    const candidate = candidateResp.candidate as Candidate | undefined;
+    // На этом шаге токена нет — он придёт после верификации email
+    if (candidate) {
+      saveAuthData('', candidate, 'CANDIDATE', rememberMe, zone);
     }
 
-    set({ token, user: candidate, role: (payload.role as UserRole) || 'CANDIDATE', isAuth: true, error: null });
+    set({ token: null, user: candidate || null, role: 'CANDIDATE', isAuth: false, error: null });
     apiService.refreshApiClient();
     console.log('🔍 loginCandidate - Login completed successfully');
     

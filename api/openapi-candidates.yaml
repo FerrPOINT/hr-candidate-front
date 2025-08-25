@@ -4,6 +4,7 @@ info:
   version: 1.0.0
   description: |
     OpenAPI спецификация для кандидатов.
+    Включает аутентификацию, процесс интервью и транскрибацию аудио ответов.
     Самодостаточный файл для генерации и документации.
   contact:
     name: HR Recruiter Team
@@ -18,76 +19,9 @@ servers:
     description: Production server
 tags:
   - name: Candidates
-    description: Управление кандидатами
+    description: Аутентификация, процесс интервью и транскрибация аудио ответов кандидатов
 paths:
-  /candidates:
-    get:
-      operationId: listCandidates
-      tags:
-        - Candidates
-      summary: Получить список всех кандидатов
-      security:
-        - AdminAuth: []
-      parameters:
-        - in: query
-          name: positionId
-          schema:
-            type: integer
-            format: int64
-          description: Фильтр по ID вакансии
-        - in: query
-          name: search
-          schema:
-            type: string
-          description: Поиск по имени или email
-        - in: query
-          name: page
-          schema:
-            type: integer
-            default: 0
-            minimum: 0
-          description: Номер страницы (начиная с 0)
-        - in: query
-          name: size
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
-          description: Размер страницы
-        - in: query
-          name: sort
-          schema:
-            type: string
-            default: createdAt
-          description: Поле для сортировки
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CandidatesPaginatedResponse'
-    post:
-      operationId: createCandidate
-      tags:
-        - Candidates
-      summary: Создать кандидата
-      security:
-        - AdminAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CandidateCreateRequest'
-      responses:
-        '201':
-          description: Кандидат создан
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Candidate'
+
   /candidates/login:
     post:
       operationId: loginCandidate
@@ -164,132 +98,317 @@ paths:
               schema:
                 $ref: '#/components/schemas/CandidateEmailVerificationResponse'
         '400':
-          description: Неверный код верификации
+          description: Неверные параметры запроса
         '500':
           description: Внутренняя ошибка сервера
       security: []
 
-
-  /candidates/{id}:
+  /candidates/positions/{positionId}/summary:
     get:
-      operationId: getCandidate
+      operationId: getPositionSummary
       tags:
         - Candidates
-      summary: Получить кандидата
-      security:
-        - AdminAuth: []
+      summary: Получение краткой информации о вакансии (Публичный endpoint)
+      description: |
+        Публичный endpoint для получения краткой информации о вакансии.
+        Доступно без авторизации для кандидатов.
+        
+        **Бизнес-логика:**
+        1. Проверка существования вакансии по positionId
+        2. Возврат только публичной информации (название, количество вопросов)
+        3. Не возвращает конфиденциальные данные (описание, настройки, вопросы)
+        
+        **Безопасность:**
+        - Доступно без аутентификации
+        - Возвращает только публичную информацию
+        - Не раскрывает внутренние детали вакансии
+        
+        Используется для отображения информации о вакансии кандидатам
+        перед началом интервью.
       parameters:
-        - in: path
-          name: id
+        - name: positionId
+          in: path
           required: true
           schema:
             type: integer
             format: int64
+          description: Уникальный идентификатор вакансии
       responses:
         '200':
-          description: OK
+          description: Краткая информация о вакансии
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Candidate'
-    put:
-      operationId: updateCandidate
-      tags:
-        - Candidates
-      summary: Обновить кандидата
-      security:
-        - AdminAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-            format: int64
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CandidateUpdateRequest'
-      responses:
-        '200':
-          description: Кандидат обновлён
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Candidate'
-    delete:
-      operationId: deleteCandidate
-      tags:
-        - Candidates
-      summary: Удалить кандидата по ID
-      security:
-        - AdminAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '204':
-          description: Кандидат успешно удален
+                $ref: '#/components/schemas/PositionSummaryResponse'
+        '404':
+          description: Вакансия не найдена
+        '500':
+          description: Внутренняя ошибка сервера
+      security: []
 
-  /positions/{positionId}/candidates:
-    get:
-      operationId: listPositionCandidates
-      tags:
-        - Candidates
-      summary: Список кандидатов по вакансии
-      security:
-        - AdminAuth: []
-      parameters:
-        - in: path
-          name: positionId
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Candidate'
+  /candidates/interview/{id}/start:
     post:
-      operationId: createPositionCandidate
-      tags:
-        - Candidates
-      summary: Добавить кандидата к вакансии
-      security:
-        - AdminAuth: []
+      operationId: startInterviewForCandidate
+      tags: [Candidates]
+      summary: Начать интервью
+      description: Позволяет кандидату самостоятельно начать собеседование
+      security: [{ CandidateAuth: [] }]
       parameters:
         - in: path
-          name: positionId
+          name: id
           required: true
-          schema:
-            type: integer
-            format: int64
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CandidateCreateRequest'
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
       responses:
-        '201':
-          description: Кандидат добавлен
+        '200':
+          description: Интервью успешно начато кандидатом
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Candidate'
+                $ref: '#/components/schemas/InterviewStartResponse'
+        '400':
+          description: Некорректные параметры или собеседование уже начато
+        '403':
+          description: Собеседование не принадлежит данному кандидату
+        '404':
+          description: Собеседование не найдено
+
+  /candidates/interview/{id}/current-question:
+    get:
+      operationId: getCurrentQuestion
+      tags: [Candidates]
+      summary: Получить текущий вопрос
+      description: Возвращает следующий неотвеченный вопрос с медиафайлом
+      security: [{ CandidateAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+      responses:
+        '200':
+          description: Текущий вопрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewQuestionResponse'
+        '404':
+          description: Интервью не найдено или вопросы закончились
+
+  /candidates/interview/{id}/answer:
+    post:
+      operationId: submitAnswer
+      tags: [Candidates]
+      summary: Отправить аудио ответ на вопрос
+      description: |
+        Сохраняет аудио ответ кандидата с автоматической транскрибацией.
+        Аудио будет транскрибировано и отформатировано автоматически.
+      security: [{ CandidateAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - questionId
+                - audioFile
+              properties:
+                questionId:
+                  type: integer
+                  format: int64
+                  description: ID вопроса
+                audioFile:
+                  type: string
+                  format: binary
+                  description: Аудиофайл с ответом (будет автоматически транскрибирован)
+      responses:
+        '200':
+          description: Аудио ответ успешно сохранен и транскрибирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitAnswerResponse'
+        '400':
+          description: Некорректные данные
+        '403':
+          description: Собеседование не принадлежит кандидату
+        '404':
+          description: Собеседование или вопрос не найдены
+
+  /candidates/interview/{id}/test-microphone:
+    post:
+      operationId: testMicrophone
+      tags: [Candidates]
+      summary: Тестирование микрофона
+      description: |
+        Проверяет качество микрофона кандидата перед началом интервью.
+        Транскрибирует тестовое аудио и возвращает оценку качества.
+      security: [{ CandidateAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - audio
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: Тестовое аудио для проверки микрофона
+      responses:
+        '200':
+          description: Микрофон успешно протестирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MicrophoneTestResponse'
+        '400':
+          description: Некорректные данные
+        '403':
+          description: Собеседование не принадлежит кандидату
+        '404':
+          description: Собеседование не найдено
+
+  /candidates/interview/welcome-messages:
+    get:
+      operationId: getWelcomeMessages
+      tags: [Candidates]
+      summary: Получить вступительные сообщения
+      description: |
+        Возвращает глобальные вступительные сообщения для кандидата и отдельно тестовое сообщение.
+        Используется для ознакомления с процессом интервью.
+      security: [{ CandidateAuth: [] }]
+      responses:
+        '200':
+          description: Вступительные сообщения успешно получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WelcomeMessagesResponse'
+        '401':
+          description: Не авторизован
+
+  /candidates/interview/additional-questions:
+    get:
+      operationId: getAdditionalQuestions
+      tags: [Candidates]
+      summary: Получить дополнительные вопросы
+      description: |
+        Возвращает список дополнительных вопросов с ответами кандидата.
+        Используется в конце интервью для получения дополнительной информации.
+      security: [{ CandidateAuth: [] }]
+      responses:
+        '200':
+          description: Дополнительные вопросы успешно получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalQuestionsResponse'
+        '403':
+          description: Собеседование не принадлежит кандидату
+        '404':
+          description: Собеседование не найдено
+
+  /candidates/interview/{id}/end:
+    post:
+      operationId: endInterview
+      tags: [Candidates]
+      summary: Завершить интервью
+      description: |
+        Позволяет кандидату завершить собеседование.
+        После завершения интервью нельзя будет продолжить отвечать на вопросы.
+      security: [{ CandidateAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+      responses:
+        '200':
+          description: Интервью успешно завершено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewEndResponse'
+        '400':
+          description: Интервью уже завершено или некорректные параметры
+        '403':
+          description: Собеседование не принадлежит кандидату
+        '404':
+          description: Собеседование не найдено
+
+  /candidates/interview/completion-messages:
+    get:
+      operationId: getCompletionMessages
+      tags: [Candidates]
+      summary: Получить завершающие сообщения
+      description: |
+        Возвращает глобальные завершающие сообщения для кандидата после окончания интервью.
+        Используется для информирования о завершении процесса.
+      security: [{ CandidateAuth: [] }]
+      responses:
+        '200':
+          description: Завершающие сообщения успешно получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompletionResponse'
+        '401':
+          description: Не авторизован
+
 components:
   schemas:
+    InterviewStartResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор собеседования
+        status:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, FINISHED]
+          description: Статус собеседования
+        startedAt:
+          type: string
+          format: date-time
+          description: Время начала собеседования
+        estimatedDuration:
+          type: integer
+          description: Ориентировочная продолжительность в минутах
+        questionsCount:
+          type: integer
+          description: Количество вопросов в собеседовании
+        currentQuestionIndex:
+          type: integer
+          description: Индекс текущего вопроса
+        instructions:
+          type: string
+          description: Инструкции для кандидата
+      required:
+        - id
+        - status
+        - startedAt
+        - questionsCount
+        - currentQuestionIndex
+
     BaseEntity:
       type: object
       properties:
@@ -306,19 +425,7 @@ components:
         - id
         - createdAt
 
-    CandidateCreateRequest:
-      type: object
-      properties:
-        firstName:
-          type: string
-        lastName:
-          type: string
-        email:
-          type: string
-      required:
-        - firstName
-        - lastName
-    CandidateUpdateRequest:
+    BaseCandidateFields:
       type: object
       properties:
         firstName:
@@ -331,15 +438,85 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/CandidateStatusEnum'
-    CandidatesPaginatedResponse:
+
+    CandidateStatusEnum:
+      type: string
+      enum:
+      - NEW
+      - IN_PROGRESS
+      - FINISHED
+      - REJECTED
+      - HIRED
+
+    Candidate:
       allOf:
-        - $ref: '#/components/schemas/PaginatedResponse'
-      description: Пагинированный список кандидатов
+        - $ref: '#/components/schemas/BaseEntity'
+        - $ref: '#/components/schemas/BaseCandidateFields'
+      type: object
+      properties:
+        emailVerified:
+          type: boolean
+          description: Статус верификации email
+        emailVerificationCode:
+          type: string
+          description: Код верификации email
+        emailVerificationExpiresAt:
+          type: string
+          format: date-time
+          description: Время истечения кода верификации
+        lastCodeSentAt:
+          type: string
+          format: date-time
+          description: Время последней отправки кода
+        codeAttempts:
+          type: integer
+          description: Количество попыток ввода кода
+        blockedUntil:
+          type: string
+          format: date-time
+          description: Время блокировки аккаунта
+      required:
+        - firstName
+        - lastName
+        - status
+        - emailVerified
+
+    PaginatedResponse:
+      type: object
+      description: Базовый класс для всех пагинированных ответов
       properties:
         content:
           type: array
+          description: Список элементов на текущей странице
           items:
-            $ref: '#/components/schemas/Candidate'
+            type: object
+        totalElements:
+          type: integer
+          format: int64
+          description: Общее количество элементов
+          example: 150
+        totalPages:
+          type: integer
+          format: int64
+          description: Общее количество страниц
+          example: 15
+        number:
+          type: integer
+          format: int64
+          description: Номер текущей страницы (начиная с 0)
+          example: 0
+        size:
+          type: integer
+          format: int64
+          description: Размер страницы
+          example: 10
+      required:
+        - content
+        - totalElements
+        - totalPages
+        - number
+        - size
+
     CandidateLoginRequest:
       type: object
       required:
@@ -409,160 +586,191 @@ components:
         token:
           type: string
           description: JWT токен для авторизованного доступа (только при успешной верификации)
+        interviewId:
+          type: integer
+          format: int64
+          description: ID активного собеседования для кандидата (только при успешной верификации)
         message:
           type: string
           description: Информационное сообщение о результате верификации
 
-
-    Candidate:
-      allOf:
-        - $ref: '#/components/schemas/BaseCandidateFields'
+    InterviewQuestionResponse:
       type: object
       properties:
-        id:
+        questionId:
           type: integer
           format: int64
-          description: Уникальный идентификатор кандидата
-        createdAt:
+          description: ID вопроса
+        text:
           type: string
-          format: date-time
-          description: Дата создания записи
-        updatedAt:
+          description: Текст вопроса
+        audioUrl:
           type: string
-          format: date-time
-          description: Дата последнего обновления
-        emailVerified:
-          type: boolean
-          description: Статус верификации email
-        emailVerificationCode:
-          type: string
-          description: Код верификации email
-        emailVerificationExpiresAt:
-          type: string
-          format: date-time
-          description: Время истечения кода верификации
-        lastCodeSentAt:
-          type: string
-          format: date-time
-          description: Время последней отправки кода
-        codeAttempts:
+          description: URL аудиофайла с озвучкой вопроса
+        questionNumber:
           type: integer
-          description: Количество попыток ввода кода
-        blockedUntil:
-          type: string
-          format: date-time
-          description: Время блокировки аккаунта
-      required:
-        - id
-        - firstName
-        - lastName
-        - status
-        - emailVerified
+          description: Номер текущего вопроса
+        totalQuestions:
+          type: integer
+          description: Общее количество вопросов
+        maxAnswerDuration:
+          type: integer
+          description: Максимальное время для ответа в секундах
 
-    BaseCandidateFields:
+    SubmitAnswerResponse:
       type: object
       properties:
-        firstName:
+        success:
+          type: boolean
+          description: true - ответ успешно сохранен
+        message:
           type: string
-        lastName:
-          type: string
-        name:
-          type: string
-        email:
-          type: string
-        status:
-          $ref: '#/components/schemas/CandidateStatusEnum'
-        resumeUrl:
-          type: string
-          description: URL резюме кандидата
-        coverLetter:
-          type: string
-          description: Сопроводительное письмо
-        experienceYears:
+          description: Сообщение о результате
+        nextQuestion:
+          type: boolean
+          description: true - есть следующий вопрос, false - интервью завершено
+        progressPercent:
           type: integer
-          description: Годы опыта работы
-        skills:
+          description: Прогресс интервью в процентах (0-100)
+
+    MicrophoneTestResponse:
+      type: object
+      properties:
+        transcript:
+          type: string
+          description: Транскрибированный текст
+          example: "Привет, меня зовут Иван, я разработчик"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: |
+            Уверенность в распознавании речи (0.0-1.0).
+            Помогает оценить качество микрофона:
+            - 0.0-0.3: Плохо (много шума, неразборчивая речь)
+            - 0.3-0.6: Средне (есть помехи, но текст понятен)
+            - 0.6-0.8: Хорошо (чистая речь, мало помех)
+            - 0.8-1.0: Отлично (идеальное качество, четкая речь)
+          example: 0.85
+        qualityAssessment:
+          type: string
+          description: Оценка качества микрофона на основе confidence
+          example: "Отлично"
+        recommendations:
           type: array
           items:
             type: string
-          description: Навыки кандидата
+          description: Рекомендации по улучшению качества микрофона
+          example: ["Микрофон работает идеально", "Можно начинать собеседование"]
+        isReadyForInterview:
+          type: boolean
+          description: Готов ли микрофон для проведения интервью
+          example: true
 
-    CandidateStatusEnum:
-      type: string
-      enum:
-      - NEW
-      - IN_PROGRESS
-      - FINISHED
-      - REJECTED
-      - HIRED
-    Interview:
+    WelcomeMessagesResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+                description: Текст вступительного сообщения
+              audioUrl:
+                type: string
+                description: URL аудиофайла с озвучкой сообщения
+          description: Список вступительных сообщений для ознакомления с процессом
+        testMessage:
+          type: object
+          properties:
+            text:
+              type: string
+              description: Текст тестового сообщения для проверки аудио
+            audioUrl:
+              type: string
+              description: URL аудиофайла с тестовым сообщением
+          description: Отдельное тестовое сообщение для проверки качества аудио
+      required:
+        - messages
+        - testMessage
+
+    AdditionalQuestionsResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          question:
+            type: string
+            description: Текст дополнительного вопроса
+          answer:
+            type: string
+            description: Ответ кандидата на дополнительный вопрос
+      description: Список дополнительных вопросов с ответами кандидата
+
+    InterviewEndResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: true - интервью успешно завершено
+        message:
+          type: string
+          description: Сообщение о результате завершения
+        completedAt:
+          type: string
+          format: date-time
+          description: Время завершения интервью
+        totalQuestions:
+          type: integer
+          description: Общее количество вопросов в интервью
+        answeredQuestions:
+          type: integer
+          description: Количество отвеченных вопросов
+      required:
+        - success
+        - completedAt
+        - totalQuestions
+        - answeredQuestions
+
+    CompletionResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+                description: Текст завершающего сообщения
+              audioUrl:
+                type: string
+                description: URL аудиофайла с озвучкой сообщения
+          description: Список завершающих сообщений для кандидата
+      required:
+        - messages
+
+    PositionSummaryResponse:
       type: object
       properties:
         id:
           type: integer
-        candidateId:
-          type: integer
-        positionId:
-          type: integer
-        status:
+          format: int64
+          description: Уникальный идентификатор вакансии
+        title:
           type: string
-        createdAt:
-          type: string
-          format: date-time
+          description: Название вакансии
+        questionsCount:
+          type: integer
+          description: Количество вопросов в интервью
       required:
         - id
-        - candidateId
-        - positionId
-        - status
-        - createdAt
-    InterviewCandidateData:
-      type: object
-      # ... (вставьте полное определение из openapi-interviews.yaml) ...
-    VoiceSessionStatusEnum:
-      type: string
-      enum:
-      - CREATED
-      - ACTIVE
-      - ENDED
-      - ERROR
-    AgentTestRequest:
-      type: object
-      # ... (вставьте полное определение из openapi-interviews.yaml, если есть) ...
-    PaginatedResponse:
-      type: object
-      description: Базовый класс для всех пагинированных ответов
-      properties:
-        content:
-          type: array
-          description: Список элементов на текущей странице
-          items:
-            type: object
-        totalElements:
-          type: integer
-          format: int64
-          description: Общее количество элементов
-          example: 150
-        totalPages:
-          type: integer
-          format: int64
-          description: Общее количество страниц
-          example: 15
-        number:
-          type: integer
-          format: int64
-          description: Номер текущей страницы (начиная с 0)
-          example: 0
-        size:
-          type: integer
-          format: int64
-          description: Размер страницы
-          example: 10
-      required:
-        - content
-        - totalElements
-        - totalPages
-        - number
-        - size
+        - title
+        - questionsCount
+
   securitySchemes:
     CandidateAuth:
       type: http

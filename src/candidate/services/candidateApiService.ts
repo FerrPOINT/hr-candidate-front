@@ -1,9 +1,7 @@
 import { apiService } from '../../services/apiService';
-import type { CandidateLoginRequest, CandidateLoginResponse, CandidateEmailVerificationRequest, CandidateEmailVerificationResponse, InterviewStartResponse } from '../../api/models';
+import type { CandidateLoginRequest, CandidateLoginResponse, CandidateEmailVerificationRequest, CandidateEmailVerificationResponse } from '../../api/models';
 import { Configuration } from '../../../generated-src/client/configuration';
-import { InterviewsApi } from '../../../generated-src/client/apis/interviews-api';
 import { CandidatesApi } from '../../../generated-src/client/apis/candidates-api';
-import { VoiceInterviewsApi } from '../../../generated-src/client/apis/voice-interviews-api';
 
 // Локальные типы для кандидата (обновлены в соответствии с новым API)
 interface CandidateAuthRequest {
@@ -142,9 +140,7 @@ class CandidateApiService {
     });
 
     return {
-      interviews: new InterviewsApi(config),
-      candidates: new CandidatesApi(config),
-      voiceInterviews: new VoiceInterviewsApi(config)
+      candidates: new CandidatesApi(config)
     };
   }
 
@@ -157,18 +153,16 @@ class CandidateApiService {
       
       // Создаем API клиент с токеном
       const apiClient = this.createApiClient(token);
-      const response = await apiClient.interviews.startInterview(interviewId, {
-        includeCandidateData: true
-      });
+      const response = await apiClient.candidates.startInterviewForCandidate(interviewId);
       
       console.log('Start interview response:', response.data);
       
       // Маппим ответ API в локальный тип
       const interview: Interview = {
-        id: response.data.interviewId || interviewId,
+        id: (response.data as any).interviewId || interviewId,
         candidateId: 0, // Будет заполнено из candidateData если доступно
         positionId: 0, // Будет заполнено из candidateData если доступно
-        status: this.mapInterviewStatus(response.data.status),
+        status: this.mapInterviewStatus((response.data as any).status),
         createdAt: new Date().toISOString(),
         startedAt: new Date().toISOString(),
         finishedAt: undefined
@@ -212,7 +206,7 @@ class CandidateApiService {
       console.log('Getting position summary for positionId:', positionId);
       
       // Используем публичный клиент без токена
-      const response = await apiService.getPublicApiClient().positions.getPositionSummary(positionId);
+      const response = await apiService.getPublicApiClient().candidates.getPositionSummary(positionId);
       console.log('API response for position summary:', response.data);
         
       // API возвращает только id, title, questionsCount
@@ -243,18 +237,7 @@ class CandidateApiService {
    * Получение информации о кандидате
    */
   async getCandidateInfo(candidateId: string, token: string): Promise<any> {
-    try {
-      console.log('Getting candidate info:', candidateId);
-      
-      const apiClient = this.createApiClient(token);
-      const response = await apiClient.candidates.getCandidate(parseInt(candidateId));
-      console.log('Get candidate info response:', response.data);
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('Get candidate info error:', error);
-      throw new Error('Ошибка получения информации о кандидате');
-    }
+    throw new Error('Недоступно в Candidates API');
   }
 
   /**
@@ -264,11 +247,8 @@ class CandidateApiService {
     try {
       console.log('Getting interview info for interview:', interviewId);
       
-      const apiClient = this.createApiClient(token);
-      const response = await apiClient.interviews.getInterview(parseInt(interviewId));
-      console.log('Get interview info response:', response.data);
-      
-      return response.data;
+      // В Candidates API нет эндпоинта получения информации об интервью
+      throw new Error('Недоступно в Candidates API');
     } catch (error: any) {
       console.error('Get interview info error:', error);
       throw new Error('Ошибка получения информации об интервью');
@@ -279,106 +259,47 @@ class CandidateApiService {
    * Старт голосового интервью
    */
   async startVoiceInterview(interviewId: string, token: string): Promise<any> {
-    try {
-      console.log('Starting voice interview:', interviewId);
-      
-      const apiClient = this.createApiClient(token);
-      const response = await apiClient.voiceInterviews.startVoiceInterview(parseInt(interviewId));
-      console.log('Start voice interview response:', response.data);
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('Start voice interview error:', error);
-      throw new Error('Ошибка запуска голосового интервью');
-    }
+    const apiClient = this.createApiClient(token);
+    return (await apiClient.candidates.startInterviewForCandidate(parseInt(interviewId))).data;
   }
 
   /**
    * Получение следующего голосового вопроса
    */
-  async getNextVoiceQuestion(interviewId: string, token: string): Promise<any> {
-    try {
-      console.log('Getting next voice question for interview:', interviewId);
-      
-      const apiClient = this.createApiClient(token);
-      const response = await apiClient.voiceInterviews.getNextVoiceQuestion(parseInt(interviewId));
-      console.log('Get next voice question response:', response.data);
-      
-      // Маппим в локальный тип
-      const question: VoiceQuestionResponse = {
-        id: String(response.data.questionId),
-        text: response.data.text,
-        audioUrl: response.data.audioUrl,
-        duration: response.data.maxDuration
-      };
-      
-      return question;
-    } catch (error: any) {
-      console.error('Get next voice question error:', error);
-      throw new Error('Ошибка получения следующего вопроса');
-    }
+  async getNextVoiceQuestion(interviewId: string, token: string): Promise<VoiceQuestionResponse> {
+    const apiClient = this.createApiClient(token);
+    const resp = await apiClient.candidates.getCurrentQuestion(parseInt(interviewId));
+    const d: any = resp.data;
+    return {
+      id: String(d.questionId ?? d.id ?? ''),
+      text: d.text || '',
+      audioUrl: d.audioUrl,
+      duration: d.maxDuration
+    };
   }
 
   /**
    * Отправка голосового ответа
    */
   async submitVoiceAnswer(interviewId: string, questionId: string, audioFile: File, token: string): Promise<any> {
-    try {
-      console.log('Submitting voice answer:', { interviewId, questionId, audioFile });
-      
-      const apiClient = this.createApiClient(token);
-      const response = await apiClient.voiceInterviews.submitVoiceAnswer(
-        parseInt(interviewId), 
-        parseInt(questionId), 
-        audioFile
-      );
-      
-      console.log('Submit voice answer response:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Submit voice answer error:', error);
-      throw new Error('Ошибка отправки голосового ответа');
-    }
+    const apiClient = this.createApiClient(token);
+    const resp = await apiClient.candidates.submitAnswer(parseInt(interviewId), parseInt(questionId), audioFile);
+    return resp.data;
   }
 
   /**
    * Завершение голосового интервью
    */
   async finishVoiceInterview(interviewId: string, token: string): Promise<any> {
-    try {
-      console.log('Finishing voice interview:', interviewId);
-      
-      const apiClient = this.createApiClient(token);
-      const response = await apiClient.voiceInterviews.endVoiceInterview(parseInt(interviewId));
-      console.log('Finish voice interview response:', response.data);
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('Finish voice interview error:', error);
-      throw new Error('Ошибка завершения voice интервью');
-    }
+    const apiClient = this.createApiClient(token);
+    const resp = await apiClient.candidates.endInterview(parseInt(interviewId));
+    return resp.data;
   }
 
   /**
    * Получение аудио ответа
    */
-  async getAnswerAudio(interviewId: string, questionId: string, token: string): Promise<any> {
-    try {
-      console.log('Getting answer audio:', { interviewId, questionId });
-      
-      const apiClient = this.createApiClient(token);
-      const response = await apiClient.voiceInterviews.getAnswerAudio(
-        parseInt(interviewId), 
-        parseInt(questionId)
-      );
-      
-      console.log('Get answer audio response:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Get answer audio error:', error);
-      throw new Error('Ошибка получения аудио ответа');
-    }
-  }
+  async getAnswerAudio(): Promise<any> { throw new Error('Недоступно'); }
 
   /**
    * Отправка ответа на вопрос интервью - защищенный эндпоинт

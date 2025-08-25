@@ -28,9 +28,7 @@
  * - Backend возвращает InterviewStartResponse с параметрами для UI
  */
 
-import { apiClient } from '../api/apiClient';
-import type { InterviewStartRequest, InterviewStartResponse } from '../api/models';
-import type { AgentConfig } from '../api/models';
+// Голосовые/интервью API отключены в этом билде (оставлены заглушки типов)
 // import type { VoiceSettings } from '../client/models/voice-settings'; // Module not found, using any
 
 /**
@@ -45,7 +43,7 @@ interface StartInterviewOptions {
   voiceMode?: boolean;
   autoCreateAgent?: boolean;
   includeCandidateData?: boolean;
-  agentConfig?: AgentConfig;
+  agentConfig?: any;
   voiceSettings?: any; // VoiceSettings type not available
 }
 
@@ -58,7 +56,7 @@ export class VoiceInterviewService {
    * @param options Опции запуска (см. StartInterviewOptions)
    * @returns InterviewStartResponse с параметрами для UI
    */
-  static async startInterview(interviewId: number, options: StartInterviewOptions = {}): Promise<InterviewStartResponse> {
+  static async startInterview(interviewId: number, options: StartInterviewOptions = {}): Promise<any> {
     // Простая проверка вместо конфига
     const elevenLabsEnabled = false; // Временно отключено
     
@@ -71,10 +69,10 @@ export class VoiceInterviewService {
         status: undefined,
         message: 'ElevenLabs disabled',
         candidateData: {},
-      } as unknown as InterviewStartResponse;
+      } as unknown as any;
     }
-    const request: InterviewStartRequest = {
-      autoCreateAgent: options.autoCreateAgent ?? false, // По умолчанию не создаем агента
+    const request: any = {
+      autoCreateAgent: options.autoCreateAgent ?? false,
       includeCandidateData: options.includeCandidateData ?? true,
       agentConfig: options.agentConfig,
       voiceSettings: options.voiceSettings
@@ -82,10 +80,7 @@ export class VoiceInterviewService {
 
     try {
       console.log('🚀 Starting interview with options:', request);
-      const response = await apiClient.interviews.startInterview(interviewId, request);
-
-      console.log('✅ Interview started successfully:', response.data);
-      return response.data;
+      throw new Error('Voice/Interviews API недоступны в этом билде');
     } catch (error: any) {
       console.error('❌ Error starting interview:', error);
       throw new Error(error?.response?.data?.message || error?.message || 'Failed to start interview');
@@ -101,9 +96,7 @@ export class VoiceInterviewService {
     const elevenLabsEnabled = false; // Временно отключено
     if (!elevenLabsEnabled) return;
     try {
-      const response = await apiClient.interviews.finishInterview(interviewId);
-      console.log('✅ Interview finished successfully');
-      return response.data;
+      throw new Error('Voice/Interviews API недоступны в этом билде');
     } catch (error: any) {
       console.error('❌ Error finishing interview:', error);
       throw new Error(error?.response?.data?.message || error?.message || 'Failed to finish interview');
