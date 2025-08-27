@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Play, Pause, Volume2 } from 'lucide-react';
+import { Play, Pause, Volume2, AlertCircle } from 'lucide-react';
 import { candidateAuthService } from '../../services/candidateAuthService';
 import logger from '../../../utils/logger';
 import { getFullAudioUrl, logAudioUrl } from '../../../utils/audioUtils';
@@ -324,10 +324,20 @@ const WelcomeMessages: React.FC<WelcomeMessagesProps> = ({ interviewId, onContin
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Ошибка загрузки</h3>
               <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={loadWelcomeMessages} variant="outline">
-                Попробовать снова
-              </Button>
+              <div className="space-y-2">
+                <Button onClick={loadWelcomeMessages} variant="outline" className="w-full">
+                  Попробовать снова
+                </Button>
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  className="w-full bg-[#e16349] text-white hover:bg-[#d14a31]"
+                >
+                  Перезагрузить страницу
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

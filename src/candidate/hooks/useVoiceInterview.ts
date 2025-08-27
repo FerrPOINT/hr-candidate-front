@@ -22,8 +22,8 @@ export function useVoiceInterview(interviewId: number) {
       setInterviewSession(session);
       setIsInterviewActive(true);
       return session;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Произошла ошибка';
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Произошла ошибка';
       setError(errorMessage);
       throw err;
     } finally {
@@ -38,8 +38,8 @@ export function useVoiceInterview(interviewId: number) {
       const question = await voiceInterviewService.getNextQuestion(interviewId.toString());
       setCurrentQuestion(question);
       return question;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Произошла ошибка';
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Произошла ошибка';
       setError(errorMessage);
       throw err;
     } finally {
@@ -70,8 +70,8 @@ export function useVoiceInterview(interviewId: number) {
       }
       
       return answer;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Произошла ошибка';
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Произошла ошибка';
       setError(errorMessage);
       throw err;
     } finally {
@@ -87,8 +87,8 @@ export function useVoiceInterview(interviewId: number) {
       setIsInterviewActive(false);
       setCurrentQuestion(null);
       return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Произошла ошибка';
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Произошла ошибка';
       setError(errorMessage);
       throw err;
     } finally {

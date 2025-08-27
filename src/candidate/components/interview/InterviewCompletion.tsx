@@ -59,7 +59,8 @@ const InterviewCompletion: React.FC<InterviewCompletionProps> = ({ interviewId, 
 
     } catch (err: any) {
       logger.error('Failed to load completion data', err as Error, { component: 'InterviewCompletion', interviewId: interviewId.toString() });
-      setError(err.message || 'Ошибка загрузки данных завершения');
+      const errorMessage = err?.response?.data?.message || err?.message || 'Ошибка загрузки данных завершения';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +91,8 @@ const InterviewCompletion: React.FC<InterviewCompletionProps> = ({ interviewId, 
 
     } catch (err: any) {
       logger.error('Failed to complete interview', err as Error, { component: 'InterviewCompletion', interviewId: interviewId.toString() });
-      setError(err.message || 'Ошибка завершения интервью');
+      const errorMessage = err?.response?.data?.message || err?.message || 'Ошибка завершения интервью';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -114,10 +116,19 @@ const InterviewCompletion: React.FC<InterviewCompletionProps> = ({ interviewId, 
           <CardContent className="pt-6">
             <div className="text-center">
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Ошибка завершения</h3>
               <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={loadCompletionData} variant="outline">
-                Попробовать снова
-              </Button>
+              <div className="space-y-2">
+                <Button onClick={loadCompletionData} variant="outline" className="w-full">
+                  Попробовать снова
+                </Button>
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  className="w-full bg-[#e16349] text-white hover:bg-[#d14a31]"
+                >
+                  Перезагрузить страницу
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

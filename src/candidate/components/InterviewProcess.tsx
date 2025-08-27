@@ -4,7 +4,7 @@ import { Button } from './';
 import { HelpModal, HelpButton, WMTLogo } from './';
 import { InstructionsModal } from './InstructionsModal';
 import { AIAvatarWithWaves } from './AIAvatarWithWaves';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Import types and utilities
@@ -45,6 +45,10 @@ export function InterviewProcess() {
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null);
   const [initialData, setInitialData] = useState<any | null>(null);
   
+  // Состояние для ошибок
+  const [error, setError] = useState<string | null>(null);
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+  
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -71,6 +75,30 @@ export function InterviewProcess() {
     }
     return 1;
   }, [location.pathname]);
+
+  // Функция для показа ошибки и блокировки интервью
+  const showError = useCallback((errorMessage: string) => {
+    console.error('❌ API Error:', errorMessage);
+    setError(errorMessage);
+    setIsErrorModalOpen(true);
+    setIsAISpeaking(false);
+    setIsTranscribing(false);
+    setIsSavingAnswer(false);
+    setIsRecording(false);
+  }, []);
+
+  // Функция для скрытия ошибки
+  const hideError = useCallback(() => {
+    setError(null);
+    setIsErrorModalOpen(false);
+  }, []);
+
+  // Функция для повторной попытки загрузки данных
+  const retryLoading = useCallback(() => {
+    hideError();
+    // Перезагружаем страницу для повторной попытки
+    window.location.reload();
+  }, [hideError]);
 
   // НАДЕЖНАЯ функция автоскролла с несколькими попытками
   const scrollToBottom = useCallback(() => {
@@ -103,8 +131,23 @@ export function InterviewProcess() {
         setIsAISpeaking(true);
         setShowMicrophoneCard(false);
         setMessages([]);
-        // Получаем все данные одним запросом
-        const resp = await apiClient.candidates.getInterviewData(interviewId);
+        
+        // Сначала проверяем localStorage на наличие сохраненных данных
+        const savedData = localStorage.getItem('interview_data');
+        let resp;
+        
+        if (savedData) {
+          // Используем сохраненные данные
+          console.log('Using saved interview data from localStorage');
+          resp = { data: JSON.parse(savedData) };
+          // Очищаем localStorage после использования
+          localStorage.removeItem('interview_data');
+        } else {
+          // Загружаем данные заново
+          console.log('Loading interview data from API');
+          resp = await apiClient.candidates.getInterviewData(interviewId);
+        }
+        
         if (isCancelled) return;
         setInitialData(resp.data);
         const items = ((resp.data as any)?.welcome?.messages || []).map((m: any, idx: number) => ({ id: `welcome-${idx}`, text: m.text || '', audioUrl: m.audioUrl }));
@@ -198,18 +241,10 @@ export function InterviewProcess() {
         };
 
         playIndex(0);
-      } catch (e) {
-        // On failure, don't block UI: show microphone card
-        const microphoneCard = { 
-          id: 'microphone-card', 
-          content: 'microphone-card', 
-          isVisible: true, 
-          isNew: true,
-          type: 'microphone-card'
-        } as any;
-        setMessages(prev => [...prev, microphoneCard]);
-        setShowMicrophoneCard(true);
-        setIsAISpeaking(false);
+      } catch (e: any) {
+        // При ошибке показываем сообщение об ошибке и блокируем интервью
+        const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка загрузки данных интервью';
+        showError(errorMessage);
       }
     };
 
@@ -225,7 +260,7 @@ export function InterviewProcess() {
         audioRef.current.pause();
       }
     };
-  }, [scrollToBottom]);
+  }, [scrollToBottom, showError]);
 
   // Простой автоскролл при изменении контента
   useEffect(() => {
@@ -398,12 +433,13 @@ export function InterviewProcess() {
         setShowMicrophoneCard(true);
       }
       clearAudio();
-    } catch (e) {
+    } catch (e: any) {
       setIsTranscribing(false);
-      setShowMicrophoneCard(true);
+      const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка тестирования микрофона';
+      showError(errorMessage);
       clearAudio();
     }
-  }, [audioBlob, clearAudio, interviewId, scrollToBottom, stopRecording]);
+  }, [audioBlob, clearAudio, interviewId, scrollToBottom, stopRecording, showError]);
 
   const handleStartInterview = useCallback(async () => {
     console.log('🚀 Starting interview');
@@ -417,11 +453,9 @@ export function InterviewProcess() {
     try {
       await apiClient.candidates.startInterview(interviewId);
     } catch (e: any) {
-      // Показать ошибку и не начинать интервью (без смены экрана)
-      setIsAISpeaking(false);
-      const errText = e?.message || 'Ошибка запуска интервью';
-      setMessages(prev => [...prev, { id: `err-${Date.now()}`, content: errText, isVisible: true, isNew: true } as any]);
-      setTimeout(() => setMessages(prev => prev.map(m => m.id.startsWith('err-') ? { ...m, isNew: false } : m)), 500);
+      // При ошибке запуска интервью показываем ошибку и блокируем продолжение
+      const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка запуска интервью';
+      showError(errorMessage);
       return;
     }
 
@@ -506,11 +540,14 @@ export function InterviewProcess() {
           setIsAISpeaking(false);
           setTimerStarted(true);
         }
-      } catch {}
+      } catch (e: any) {
+        const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка получения вопроса';
+        showError(errorMessage);
+      }
     };
 
     fetchAndPlay();
-  }, [addQuestionCard, interviewId, scrollToBottom]);
+  }, [addQuestionCard, interviewId, scrollToBottom, showError]);
 
   const handleRecordAnswer = useCallback(() => {
     console.log('🎙️ Starting to record answer for question', currentQuestionIndex + 1);
@@ -531,7 +568,11 @@ export function InterviewProcess() {
         // Пропуск: skip=true без аудио
         await apiClient.candidates.submitAnswer(interviewId, currentQuestionId, true);
       }
-    } catch {}
+    } catch (e: any) {
+      const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка отправки ответа';
+      showError(errorMessage);
+      return;
+    }
 
     try {
       const { data } = await apiClient.candidates.getCurrentQuestion(interviewId);
@@ -617,8 +658,11 @@ export function InterviewProcess() {
       } else {
         setTimerStarted(true);
       }
-    } catch {}
-  }, [currentQuestionIndex, completeQuestion, addQuestionCard, currentQuestionId, interviewId, totalQuestions, scrollToBottom]);
+    } catch (e: any) {
+      const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка получения следующего вопроса';
+      showError(errorMessage);
+    }
+  }, [currentQuestionIndex, completeQuestion, addQuestionCard, currentQuestionId, interviewId, totalQuestions, scrollToBottom, showError]);
 
   // Даем таймеру доступ к логике пропуска
   useEffect(() => {
@@ -726,11 +770,13 @@ export function InterviewProcess() {
       } else {
         setTimerStarted(true);
       }
-    } catch {
+    } catch (e: any) {
       setIsTranscribing(false);
       setIsSavingAnswer(false);
+      const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка отправки ответа';
+      showError(errorMessage);
     }
-  }, [addQuestionCard, audioBlob, completeQuestion, currentQuestionId, currentQuestionIndex, interviewId, scrollToBottom, stopRecording, totalQuestions]);
+  }, [addQuestionCard, audioBlob, completeQuestion, currentQuestionId, currentQuestionIndex, interviewId, scrollToBottom, stopRecording, totalQuestions, showError]);
 
   const handleCandidateQuestionsComplete = useCallback(() => {
     console.log('🎉 Interview completed');
@@ -1073,6 +1119,34 @@ export function InterviewProcess() {
         onClose={() => setIsInstructionsModalOpen(false)}
         onStartInterview={handleStartInterview}
       />
+
+      {/* Модальное окно ошибки */}
+      {isErrorModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="h-6 w-6 text-red-500 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">Ошибка</h3>
+            </div>
+            <p className="text-gray-700 mb-6">{error}</p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                onClick={hideError}
+                variant="outline"
+                className="px-4 py-2"
+              >
+                Закрыть
+              </Button>
+              <Button
+                onClick={retryLoading}
+                className="px-4 py-2 bg-[#e16349] text-white hover:bg-[#d14a31]"
+              >
+                Попробовать снова
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -78,7 +78,8 @@ const CandidateInterview: React.FC = () => {
         console.log('Интервью инициализировано:', data);
       } catch (error: any) {
         console.error('Ошибка инициализации интервью:', error);
-        setError(error.message || 'Ошибка запуска интервью');
+        const errorMessage = error?.response?.data?.message || error?.message || 'Ошибка запуска интервью';
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -153,7 +154,8 @@ const CandidateInterview: React.FC = () => {
         setAudioProgress(0);
       } catch (error: any) {
         console.error('Ошибка получения следующего вопроса:', error);
-        setError(error.message || 'Ошибка получения вопроса');
+        const errorMessage = error?.response?.data?.message || error?.message || 'Ошибка получения вопроса';
+        setError(errorMessage);
       }
     }
   }, [currentQuestion, totalQuestions, interviewData]);
@@ -173,7 +175,8 @@ const CandidateInterview: React.FC = () => {
         navigate('/complete');
       } catch (error: any) {
         console.error('Ошибка завершения интервью:', error);
-        setError(error.message || 'Ошибка завершения интервью');
+        const errorMessage = error?.response?.data?.message || error?.message || 'Ошибка завершения интервью';
+        setError(errorMessage);
       }
     }
   }, [interviewData, navigate]);
@@ -202,7 +205,8 @@ const CandidateInterview: React.FC = () => {
         setIsInterviewStarted(true);
       } catch (error: any) {
         console.error('Ошибка запуска интервью:', error);
-        setError(error.message || 'Ошибка запуска интервью');
+        const errorMessage = error?.response?.data?.message || error?.message || 'Ошибка запуска интервью';
+        setError(errorMessage);
       }
     }
   }, [interviewData]);
@@ -223,14 +227,27 @@ const CandidateInterview: React.FC = () => {
       <div className="bg-[#e9eae2] min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-md">
-            <h3 className="text-red-800 font-medium mb-2">Ошибка</h3>
+            <div className="flex items-center justify-center mb-4">
+              <svg className="h-8 w-8 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <h3 className="text-red-800 font-medium">Ошибка</h3>
+            </div>
             <p className="text-red-600 text-sm mb-4">{error}</p>
-            <button
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 bg-[#e16349] text-white rounded-lg hover:bg-[#d14a31] transition-colors"
-            >
-              Вернуться к входу
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-4 py-2 bg-[#e16349] text-white rounded-lg hover:bg-[#d14a31] transition-colors"
+              >
+                Попробовать снова
+              </button>
+              <button
+                onClick={() => navigate('/login')}
+                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Вернуться к входу
+              </button>
+            </div>
           </div>
         </div>
       </div>

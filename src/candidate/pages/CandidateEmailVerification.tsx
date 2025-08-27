@@ -82,8 +82,29 @@ const CandidateEmailVerification: React.FC = () => {
       
       if (response.success) {
         console.log('Email verification successful:', response);
-        // После верификации идем на интервью (welcome сообщения загрузятся там)
-        navigate(`/candidate/interview/${interviewId}`);
+        // После успешной верификации запрашиваем данные интервью
+        try {
+          const token = candidateAuthService.getAuthToken();
+          if (!token) {
+            throw new Error('Токен авторизации не найден');
+          }
+          
+          // Запрашиваем данные интервью
+          const { apiService } = await import('../../services/apiService');
+          const interviewData = await apiService.getApiClient().candidates.getInterviewData(parseInt(interviewId, 10));
+          
+          console.log('Interview data loaded successfully:', interviewData);
+          
+          // Сохраняем данные в localStorage для использования в процессе интервью
+          localStorage.setItem('interview_data', JSON.stringify(interviewData.data));
+          
+          // После успешной загрузки данных переходим к интервью
+          navigate(`/candidate/interview/${interviewId}`);
+        } catch (dataError: any) {
+          console.error('Error loading interview data:', dataError);
+          setError('Ошибка загрузки данных интервью. Попробуйте еще раз.');
+          setIsVerifying(false);
+        }
       } else {
         console.error('Email verification failed:', response.error);
         setError(response.error || 'Неверный код. Проверьте код в письме и попробуйте снова');
