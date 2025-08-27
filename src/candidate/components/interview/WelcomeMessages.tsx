@@ -246,10 +246,11 @@ const WelcomeMessages: React.FC<WelcomeMessagesProps> = ({ interviewId, onContin
       });
       
       const { apiService } = await import('../../../services/apiService');
-      const api = (await apiService.getApiClient().candidates.getWelcomeMessages()).data;
+      const resp = (await apiService.getApiClient().candidates.getInterviewData(interviewId)).data as any;
+      const api = resp?.welcome || { messages: [], testMessage: undefined };
       const normalized: WelcomeMessagesData = {
-        messages: (api.messages || []).map(m => ({ text: m.text || '', audioUrl: m.audioUrl || '' })),
-        testMessage: api.testMessage ? { text: api.testMessage.text || '', audioUrl: api.testMessage.audioUrl || '' } : undefined
+        messages: ((api.messages || []) as Array<{ text?: string; audioUrl?: string }>).map((m) => ({ text: m.text || '', audioUrl: m.audioUrl || '' })),
+        testMessage: api.testMessage ? { text: (api.testMessage as any).text || '', audioUrl: (api.testMessage as any).audioUrl || '' } : undefined
       };
       
       logger.info('📥 Вступительные сообщения успешно загружены', { 

@@ -153,7 +153,7 @@ class CandidateApiService {
       
       // Создаем API клиент с токеном
       const apiClient = this.createApiClient(token);
-      const response = await apiClient.candidates.startInterviewForCandidate(interviewId);
+      const response = await apiClient.candidates.startInterview(interviewId);
       
       console.log('Start interview response:', response.data);
       
@@ -260,7 +260,7 @@ class CandidateApiService {
    */
   async startVoiceInterview(interviewId: string, token: string): Promise<any> {
     const apiClient = this.createApiClient(token);
-    return (await apiClient.candidates.startInterviewForCandidate(parseInt(interviewId))).data;
+    return (await apiClient.candidates.startInterview(parseInt(interviewId))).data;
   }
 
   /**
@@ -283,7 +283,7 @@ class CandidateApiService {
    */
   async submitVoiceAnswer(interviewId: string, questionId: string, audioFile: File, token: string): Promise<any> {
     const apiClient = this.createApiClient(token);
-    const resp = await apiClient.candidates.submitAnswer(parseInt(interviewId), parseInt(questionId), audioFile);
+    const resp = await apiClient.candidates.submitAnswer(parseInt(interviewId), parseInt(questionId), false, audioFile);
     return resp.data;
   }
 

@@ -22,87 +22,6 @@ tags:
     description: Аутентификация, процесс интервью и транскрибация аудио ответов кандидатов
 paths:
 
-  /candidates/login:
-    post:
-      operationId: loginCandidate
-      tags:
-        - Candidates
-      summary: Логин кандидата (Публичный endpoint)
-      description: |
-        Публичный endpoint для логина кандидата.
-        Доступно без авторизации.
-        
-        **Бизнес-логика:**
-        1. Проверка существования вакансии по positionId
-        2. Поиск или создание кандидата
-        3. Проверка наличия активного собеседования для этой вакансии
-        4. Отправка кода верификации на email
-        
-        **Безопасность:**
-        - Требуется указать positionId вакансии (НЕ собеседования)
-        - Проверяется наличие активного собеседования
-        - Код верификации отправляется на email
-        
-        Возвращает данные кандидата и флаг необходимости верификации.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CandidateLoginRequest'
-      responses:
-        '200':
-          description: Успешный логин, требуется верификация email
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CandidateLoginResponse'
-        '400':
-          description: Неверные параметры запроса
-        '500':
-          description: Внутренняя ошибка сервера
-      security: []
-
-  /candidates/verify-email:
-    post:
-      operationId: verifyCandidateEmail
-      tags:
-        - Candidates
-      summary: Верификация email кандидата (Публичный endpoint)
-      description: |
-        Публичный endpoint для верификации email кандидата.
-        Доступно без авторизации.
-        
-        **Бизнес-логика:**
-        1. Проверка кода верификации
-        2. Подтверждение email кандидата
-        3. Генерация JWT токена для авторизованного доступа
-        
-        **Безопасность:**
-        - Требуется корректный код верификации
-        - Email подтверждается только после успешной проверки кода
-        - JWT выдается только верифицированным кандидатам
-        
-        Возвращает JWT токен для дальнейшей авторизации.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CandidateEmailVerificationRequest'
-      responses:
-        '200':
-          description: Email успешно верифицирован, JWT токен выдан
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CandidateEmailVerificationResponse'
-        '400':
-          description: Неверные параметры запроса
-        '500':
-          description: Внутренняя ошибка сервера
-      security: []
-
   /candidates/positions/{positionId}/summary:
     get:
       operationId: getPositionSummary
@@ -144,114 +63,133 @@ paths:
           description: Вакансия не найдена
         '500':
           description: Внутренняя ошибка сервера
-      security: []
+      security: [ ]
 
-  /candidates/interview/{id}/start:
+
+  /candidates/login:
     post:
-      operationId: startInterviewForCandidate
-      tags: [Candidates]
-      summary: Начать интервью
-      description: Позволяет кандидату самостоятельно начать собеседование
-      security: [{ CandidateAuth: [] }]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: integer, format: int64 }
-          description: ID собеседования
-      responses:
-        '200':
-          description: Интервью успешно начато кандидатом
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InterviewStartResponse'
-        '400':
-          description: Некорректные параметры или собеседование уже начато
-        '403':
-          description: Собеседование не принадлежит данному кандидату
-        '404':
-          description: Собеседование не найдено
-
-  /candidates/interview/{id}/current-question:
-    get:
-      operationId: getCurrentQuestion
-      tags: [Candidates]
-      summary: Получить текущий вопрос
-      description: Возвращает следующий неотвеченный вопрос с медиафайлом
-      security: [{ CandidateAuth: [] }]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: integer, format: int64 }
-          description: ID собеседования
-      responses:
-        '200':
-          description: Текущий вопрос
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InterviewQuestionResponse'
-        '404':
-          description: Интервью не найдено или вопросы закончились
-
-  /candidates/interview/{id}/answer:
-    post:
-      operationId: submitAnswer
-      tags: [Candidates]
-      summary: Отправить аудио ответ на вопрос
+      operationId: loginCandidate
+      tags:
+        - Candidates
+      summary: Логин кандидата (Публичный endpoint)
       description: |
-        Сохраняет аудио ответ кандидата с автоматической транскрибацией.
-        Аудио будет транскрибировано и отформатировано автоматически.
-      security: [{ CandidateAuth: [] }]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: integer, format: int64 }
-          description: ID собеседования
+        Публичный endpoint для логина кандидата.
+        Доступно без авторизации.
+        
+        **Бизнес-логика:**
+        1. Проверка существования вакансии по positionId
+        2. Поиск или создание кандидата
+        3. Проверка наличия активного собеседования для этой вакансии
+        4. Отправка кода верификации на email
+        
+        **Безопасность:**
+        - Требуется указать positionId вакансии (НЕ собеседования)
+        - Проверяется наличие активного собеседования
+        - Код верификации отправляется на email
+        
+        Возвращает данные кандидата и флаг необходимости верификации.
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              type: object
-              required:
-                - questionId
-                - audioFile
-              properties:
-                questionId:
-                  type: integer
-                  format: int64
-                  description: ID вопроса
-                audioFile:
-                  type: string
-                  format: binary
-                  description: Аудиофайл с ответом (будет автоматически транскрибирован)
+              $ref: '#/components/schemas/CandidateLoginRequest'
       responses:
         '200':
-          description: Аудио ответ успешно сохранен и транскрибирован
+          description: Успешный логин, требуется верификация email
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SubmitAnswerResponse'
+                $ref: '#/components/schemas/CandidateLoginResponse'
         '400':
-          description: Некорректные данные
+          description: Неверные параметры запроса
+        '500':
+          description: Внутренняя ошибка сервера
+      security: [ ]
+
+  /candidates/verify-email:
+    post:
+      operationId: verifyCandidateEmail
+      tags:
+        - Candidates
+      summary: Верификация email кандидата (Публичный endpoint)
+      description: |
+        Публичный endpoint для верификации email кандидата.
+        Доступно без авторизации.
+        
+        **Бизнес-логика:**
+        1. Проверка кода верификации
+        2. Подтверждение email кандидата
+        3. Генерация JWT токена для авторизованного доступа
+        
+        **Безопасность:**
+        - Требуется корректный код верификации
+        - Email подтверждается только после успешной проверки кода
+        - JWT выдается только верифицированным кандидатам
+        
+        Возвращает JWT токен для дальнейшей авторизации.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidateEmailVerificationRequest'
+      responses:
+        '200':
+          description: Email успешно верифицирован, JWT токен выдан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateEmailVerificationResponse'
+        '400':
+          description: Неверные параметры запроса
+        '500':
+          description: Внутренняя ошибка сервера
+      security: [ ]
+
+  /candidates/interview/{id}/data:
+    get:
+      operationId: getInterviewData
+      tags: [ Candidates ]
+      summary: Получить все данные для интервью
+      description: |
+        Возвращает все необходимые данные для проведения интервью в одном запросе:
+        - Приветственные сообщения и тестовые данные
+        - Завершающие сообщения
+        - Дополнительные вопросы о компании
+        - Информация об интервью и позиции
+        
+        Это позволяет фронтенду получить все данные одним запросом вместо нескольких отдельных.
+      security: [ { CandidateAuth: [ ] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+      responses:
+        '200':
+          description: Все данные интервью успешно получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewDataResponse'
+        '401':
+          description: Не авторизован
         '403':
           description: Собеседование не принадлежит кандидату
         '404':
-          description: Собеседование или вопрос не найдены
+          description: Собеседование не найдено
 
   /candidates/interview/{id}/test-microphone:
     post:
       operationId: testMicrophone
-      tags: [Candidates]
+      tags: [ Candidates ]
       summary: Тестирование микрофона
       description: |
         Проверяет качество микрофона кандидата перед началом интервью.
         Транскрибирует тестовое аудио и возвращает оценку качества.
-      security: [{ CandidateAuth: [] }]
+      security: [ { CandidateAuth: [ ] } ]
       parameters:
         - in: path
           name: id
@@ -285,55 +223,145 @@ paths:
         '404':
           description: Собеседование не найдено
 
-  /candidates/interview/welcome-messages:
-    get:
-      operationId: getWelcomeMessages
-      tags: [Candidates]
-      summary: Получить вступительные сообщения
-      description: |
-        Возвращает глобальные вступительные сообщения для кандидата и отдельно тестовое сообщение.
-        Используется для ознакомления с процессом интервью.
-      security: [{ CandidateAuth: [] }]
+  /candidates/interview/{id}/start:
+    post:
+      operationId: startInterview
+      tags: [ Candidates ]
+      summary: Начать интервью
+      description: Позволяет кандидату самостоятельно начать собеседование
+      security: [ { CandidateAuth: [ ] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
       responses:
         '200':
-          description: Вступительные сообщения успешно получены
+          description: Интервью успешно начато кандидатом
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WelcomeMessagesResponse'
-        '401':
-          description: Не авторизован
+                $ref: '#/components/schemas/InterviewStartResponse'
+        '400':
+          description: Некорректные параметры или собеседование уже начато
+        '403':
+          description: Собеседование не принадлежит данному кандидату
+        '404':
+          description: Собеседование не найдено
 
-  /candidates/interview/additional-questions:
+  /candidates/interview/{id}/question:
     get:
-      operationId: getAdditionalQuestions
-      tags: [Candidates]
-      summary: Получить дополнительные вопросы
+      operationId: getCurrentQuestion
+      tags: [ Candidates ]
+      summary: Получить текущий вопрос
       description: |
-        Возвращает список дополнительных вопросов с ответами кандидата.
-        Используется в конце интервью для получения дополнительной информации.
-      security: [{ CandidateAuth: [] }]
+        Возвращает следующий неотвеченный вопрос для интервью.
+        
+        **Валидации:**
+        1. Интервью должно быть в статусе IN_PROGRESS
+        2. Кандидат должен иметь доступ к интервью
+        
+        **Логика:**
+        - Получает список вопросов из позиции
+        - Находит следующий неотвеченный вопрос
+        - Возвращает вопрос с метаданными и прогрессом
+      security: [ { CandidateAuth: [ ] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
       responses:
         '200':
-          description: Дополнительные вопросы успешно получены
+          description: Вопрос успешно получен
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdditionalQuestionsResponse'
+                $ref: '#/components/schemas/InterviewQuestionResponse'
+        '400':
+          description: |
+            Некорректные данные:
+            - Интервью не стартовано
+            - Интервью уже завершено
         '403':
           description: Собеседование не принадлежит кандидату
         '404':
-          description: Собеседование не найдено
+          description: Собеседование не найдено или все вопросы отвечены
+
+  /candidates/interview/{id}/answer:
+    post:
+      operationId: submitAnswer
+      tags: [ Candidates ]
+      summary: Отправить ответ на вопрос
+      description: |
+        Отправляет ответ на вопрос интервью.
+        
+        **Варианты ответа:**
+        1. **Аудио ответ** - отправляется аудио файл для транскрибации
+        2. **Пропуск вопроса** - устанавливается параметр skip=true (аудио не требуется)
+        
+        **Процесс:**
+        1. При аудио ответе - файл транскрибируется
+        2. При пропуске - сохраняется пустой ответ
+        3. Ответ сохраняется в базе данных
+        4. Возвращается информация о прогрессе
+      security: [ { CandidateAuth: [ ] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID собеседования
+        - in: query
+          name: questionId
+          required: true
+          schema: { type: integer, format: int64 }
+          description: ID вопроса
+        - in: query
+          name: skip
+          required: false
+          schema: { type: boolean, default: false }
+          description: Пропустить вопрос (не отправлять аудио)
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audioFile:
+                  type: string
+                  format: binary
+                  description: Аудио файл с ответом (не требуется при skip=true)
+      responses:
+        '200':
+          description: Ответ успешно отправлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitAnswerResponse'
+        '400':
+          description: |
+            Некорректные данные:
+            - Отсутствует аудио файл при skip=false
+            - Аудио файл отправлен при skip=true
+            - Некорректный формат файла
+        '403':
+          description: Собеседование не принадлежит кандидату
+        '404':
+          description: Собеседование или вопрос не найдены
 
   /candidates/interview/{id}/end:
     post:
       operationId: endInterview
-      tags: [Candidates]
+      tags: [ Candidates ]
       summary: Завершить интервью
       description: |
         Позволяет кандидату завершить собеседование.
         После завершения интервью нельзя будет продолжить отвечать на вопросы.
-      security: [{ CandidateAuth: [] }]
+      security: [ { CandidateAuth: [ ] } ]
       parameters:
         - in: path
           name: id
@@ -354,24 +382,7 @@ paths:
         '404':
           description: Собеседование не найдено
 
-  /candidates/interview/completion-messages:
-    get:
-      operationId: getCompletionMessages
-      tags: [Candidates]
-      summary: Получить завершающие сообщения
-      description: |
-        Возвращает глобальные завершающие сообщения для кандидата после окончания интервью.
-        Используется для информирования о завершении процесса.
-      security: [{ CandidateAuth: [] }]
-      responses:
-        '200':
-          description: Завершающие сообщения успешно получены
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CompletionResponse'
-        '401':
-          description: Не авторизован
+
 
 components:
   schemas:
@@ -384,7 +395,7 @@ components:
           description: Уникальный идентификатор собеседования
         status:
           type: string
-          enum: [NOT_STARTED, IN_PROGRESS, FINISHED]
+          enum: [ NOT_STARTED, IN_PROGRESS, FINISHED ]
           description: Статус собеседования
         startedAt:
           type: string
@@ -442,11 +453,11 @@ components:
     CandidateStatusEnum:
       type: string
       enum:
-      - NEW
-      - IN_PROGRESS
-      - FINISHED
-      - REJECTED
-      - HIRED
+        - NEW
+        - IN_PROGRESS
+        - FINISHED
+        - REJECTED
+        - HIRED
 
     Candidate:
       allOf:
@@ -607,12 +618,21 @@ components:
         audioUrl:
           type: string
           description: URL аудиофайла с озвучкой вопроса
-        questionNumber:
+        index:
           type: integer
-          description: Номер текущего вопроса
-        totalQuestions:
+          description: Индекс вопроса в интервью (начиная с 1)
+        total:
           type: integer
-          description: Общее количество вопросов
+          description: Общее количество вопросов в интервью
+        answered:
+          type: integer
+          description: Количество уже отвеченных вопросов
+        canAnswer:
+          type: boolean
+          description: Можно ли отвечать на этот вопрос (true для следующего неотвеченного)
+        alreadyAnswered:
+          type: boolean
+          description: Уже отвечен ли этот вопрос
         maxAnswerDuration:
           type: integer
           description: Максимальное время для ответа в секундах
@@ -662,7 +682,7 @@ components:
           items:
             type: string
           description: Рекомендации по улучшению качества микрофона
-          example: ["Микрофон работает идеально", "Можно начинать собеседование"]
+          example: [ "Микрофон работает идеально", "Можно начинать собеседование" ]
         isReadyForInterview:
           type: boolean
           description: Готов ли микрофон для проведения интервью
@@ -693,6 +713,30 @@ components:
               type: string
               description: URL аудиофайла с тестовым сообщением
           description: Отдельное тестовое сообщение для проверки качества аудио
+        testPositiveResponses:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+                description: Текст позитивного ответа на тест
+              audioUrl:
+                type: string
+                description: URL аудиофайла с позитивным ответом
+          description: Список позитивных ответов на тест (может быть несколько)
+        testNegativeResponses:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+                description: Текст негативного ответа на тест
+              audioUrl:
+                type: string
+                description: URL аудиофайла с негативным ответом
+          description: Список негативных ответов на тест (может быть несколько)
       required:
         - messages
         - testMessage
@@ -770,6 +814,89 @@ components:
         - id
         - title
         - questionsCount
+
+    InterviewDataResponse:
+      type: object
+      properties:
+        welcome:
+          $ref: '#/components/schemas/WelcomeMessagesResponse'
+          description: Приветственные сообщения
+        test:
+          type: object
+          properties:
+            testMessage:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Текст тестового сообщения
+                audioUrl:
+                  type: string
+                  description: URL аудиофайла с тестовым сообщением
+              description: Тестовое сообщение для проверки аудио
+            testPositiveResponses:
+              type: array
+              items:
+                type: object
+                properties:
+                  text:
+                    type: string
+                    description: Текст позитивного ответа
+                  audioUrl:
+                    type: string
+                    description: URL аудиофайла с позитивным ответом
+              description: Позитивные ответы на тест
+            testNegativeResponses:
+              type: array
+              items:
+                type: object
+                properties:
+                  text:
+                    type: string
+                    description: Текст негативного ответа
+                  audioUrl:
+                    type: string
+                    description: URL аудиофайла с негативным ответом
+              description: Негативные ответы на тест
+          description: Тестовые данные для проверки микрофона
+        completion:
+          $ref: '#/components/schemas/CompletionResponse'
+          description: Завершающие сообщения
+        additionalQuestions:
+          $ref: '#/components/schemas/AdditionalQuestionsResponse'
+          description: Дополнительные вопросы о компании
+        interview:
+          type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+              description: ID интервью
+            status:
+              type: string
+              enum: [ NOT_STARTED, IN_PROGRESS, FINISHED ]
+              description: Статус интервью
+            position:
+              $ref: '#/components/schemas/PositionSummaryResponse'
+              description: Информация о позиции
+            questionIds:
+              type: array
+              items:
+                type: integer
+                format: int64
+              description: Список ID вопросов в порядке их появления в интервью
+          required:
+            - id
+            - status
+            - position
+            - questionIds
+          description: Информация об интервью и позиции
+      required:
+        - welcome
+        - test
+        - completion
+        - additionalQuestions
+        - interview
 
   securitySchemes:
     CandidateAuth:

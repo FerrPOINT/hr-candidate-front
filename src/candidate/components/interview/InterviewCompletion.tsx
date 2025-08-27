@@ -41,16 +41,14 @@ const InterviewCompletion: React.FC<InterviewCompletionProps> = ({ interviewId, 
       setIsLoading(true);
       setError(null);
 
-      // Загружаем дополнительные вопросы
-      // В этом экране дополнительные вопросы получаем списком через CandidatesApi.getAdditionalQuestions
-      const token = candidateAuthService.getToken() || '';
+      // Получаем все данные завершения одним запросом
       const apiClient = (await import('../../../services/apiService')).apiService.getApiClient();
-      const questionsData = (await apiClient.candidates.getAdditionalQuestions()).data as any[];
+      const data = (await apiClient.candidates.getInterviewData(interviewId)).data as any;
+      const questionsData = (data?.additionalQuestions || []) as any[];
       setAdditionalQuestions(questionsData || []);
 
-      // Загружаем завершающие сообщения
-      const completion = (await apiClient.candidates.getCompletionMessages()).data as any;
-      setCompletionMessages((completion?.messages || []).map((m: any) => ({ text: m?.text || '', audioUrl: m?.audioUrl })));
+      const completion = data?.completion || {};
+      setCompletionMessages(((completion?.messages || []) as any[]).map((m: any) => ({ text: m?.text || '', audioUrl: m?.audioUrl })));
 
       // Инициализируем ответы
       const initialAnswers: { [key: string]: string } = {};
