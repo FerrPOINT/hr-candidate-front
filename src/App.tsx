@@ -14,7 +14,7 @@ const SessionInitializer: React.FC<{ zone: 'crm' | 'candidate' }> = ({ zone }) =
     console.log('🔍 SessionInitializer - zone:', zone, 'pathname:', location.pathname);
     
     // Для CRM-зоны инициализируем только если путь начинается с /recruiter, /admin, /login
-    if (zone === 'crm' && (/^\/(recruiter|admin|login)/.test(location.pathname) || location.pathname === '/')) {
+    if (zone === 'crm' && (/^\/(recruiter|admin|login)/.test(location.pathname))) {
       console.log('🔍 SessionInitializer - Initializing CRM session');
       restoreSession().catch(error => {
         console.error('Failed to restore CRM session:', error);
@@ -41,17 +41,11 @@ function App() {
       {/* Инициализация сессии для кандидата */}
       <SessionInitializer zone="candidate" />
       <Routes>
-        {/* Главная страница с редиректом на интервью */}
-        <Route path="/" element={<Navigate to="/interview/1" replace />} />
-        
-        {/* Single Page для кандидата - весь флоу в одном контейнере */}
+        {/* Single Page для кандидата - только по конкретному ID интервью */}
         <Route path="/interview/:interviewId" element={<CandidateApp />} />
         
-        {/* Страницы кандидатов */}
-        <Route path="/candidate/*" element={<CandidateApp />} />
-        
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Fallback - 404 без редиректов */}
+        <Route path="*" element={<div>404 - Страница не найдена</div>} />
       </Routes>
     </Router>
   );
