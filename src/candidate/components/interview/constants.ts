@@ -64,22 +64,3 @@ export const companyQuestions: CompanyQuestion[] = [
   }
 ];
 
-export const processQuestions: ProcessQuestion[] = [
-  {
-    id: 1,
-    text: "Расскажите о вашем опыте работы и о проектах на последних двух местах работы.",
-    timeLimit: 150
-  },
-  {
-    id: 2,
-    text: "Опишите самый сложный проект, над которым вы работали, и как вы его решили.",
-    timeLimit: 150
-  },
-  {
-    id: 3,
-    text: "Какие технологии вы изучали в последнее время и почему?",
-    timeLimit: 150
-  }
-];
-
-export const readingText = "Хотите понять других – пристальнее смотрите в самого себя.";

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QuestionResponseInterface, COMPANY_QUESTIONS, Question } from './QuestionResponseInterface';
+import { QuestionResponseInterface, Question } from './QuestionResponseInterface';
 
 interface CandidateQuestionsProps {
   onComplete: () => void;
@@ -106,8 +106,8 @@ export function CandidateQuestions({ onComplete, onAISpeakingChange, onNewMessag
   }, [selectedQuestion, onAISpeakingChange, onNewMessage, onAddUserMessage]);
 
   const getAvailableQuestions = useCallback(() => {
-    const source = (questionsOverride && questionsOverride.length > 0) ? questionsOverride : COMPANY_QUESTIONS;
-    return source.filter(q => !askedQuestions.has(q.id)).slice(0, 6);
+    const source = questionsOverride && questionsOverride.length > 0 ? questionsOverride : [];
+    return source.filter((q: Question) => !askedQuestions.has(q.id)).slice(0, 6);
   }, [askedQuestions, questionsOverride]);
 
   const availableQuestions = getAvailableQuestions();

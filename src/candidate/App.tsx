@@ -24,13 +24,7 @@ interface JobPosition {
   questionsCount: number;
 }
 
-const defaultJobPosition: JobPosition = {
-  title: "Software Engineer",
-  department: "Engineering",
-  company: "WMT group",
-  type: "Full-time",
-  questionsCount: 3
-};
+
 
 export default function App() {
   const { interviewId: urlInterviewId } = useParams<{ interviewId: string }>();

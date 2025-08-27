@@ -1,4 +1,4 @@
-import { readingText } from './constants';
+
 
 export function ReadingTestCard() {
   return (
@@ -14,7 +14,7 @@ export function ReadingTestCard() {
               <p className="block leading-[24px]">Прочитай предложение</p>
             </div>
             <div className="css-5cyu6a flex flex-col justify-center relative shrink-0 text-[#000000] text-[14px] tracking-[-0.084px] w-full">
-              <p className="block leading-[20px]">"{readingText}"</p>
+              <p className="block leading-[20px]">"Хотите понять других – пристальнее смотрите в самого себя."</p>
             </div>
           </div>
         </div>

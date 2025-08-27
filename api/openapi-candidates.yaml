@@ -729,43 +729,8 @@ components:
                 type: string
                 description: URL аудиофайла с озвучкой сообщения
           description: Список вступительных сообщений для ознакомления с процессом
-        testMessage:
-          type: object
-          properties:
-            text:
-              type: string
-              description: Текст тестового сообщения для проверки аудио
-            audioUrl:
-              type: string
-              description: URL аудиофайла с тестовым сообщением
-          description: Отдельное тестовое сообщение для проверки качества аудио
-        testPositiveResponses:
-          type: array
-          items:
-            type: object
-            properties:
-              text:
-                type: string
-                description: Текст позитивного ответа на тест
-              audioUrl:
-                type: string
-                description: URL аудиофайла с позитивным ответом
-          description: Список позитивных ответов на тест (может быть несколько)
-        testNegativeResponses:
-          type: array
-          items:
-            type: object
-            properties:
-              text:
-                type: string
-                description: Текст негативного ответа на тест
-              audioUrl:
-                type: string
-                description: URL аудиофайла с негативным ответом
-          description: Список негативных ответов на тест (может быть несколько)
       required:
         - messages
-        - testMessage
 
     AdditionalQuestionsResponse:
       type: array

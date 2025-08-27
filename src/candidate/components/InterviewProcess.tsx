@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Import types and utilities
 import { ProcessStage, AIMessage, QuestionCard } from './interview/types';
-import { processQuestions, readingText } from './interview/constants';
+
 import { apiClient } from '../../api/apiClient';
 import { getFullAudioUrl, logAudioUrl } from '../../utils/audioUtils';
 import { createQuestionCard, markQuestionAsCompleted, updateQuestionTime } from './interview/utils';
@@ -163,28 +163,32 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
             setMessages(prev => [...prev, microphoneCard]);
             setShowMicrophoneCard(true);
             setIsAISpeaking(false);
-            // Воспроизводим тестовое сообщение, если есть audioUrl
+            // Воспроизводим тестовое сообщение через 1 секунду после показа карточки микротеста
             const t = testMessageRef.current;
-            if (t?.text) {
-              const id = `test-msg`;
-              setMessages(prev => [...prev, { id, content: t.text!, isVisible: true, isNew: true } as any]);
-              setTimeout(() => setMessages(prev => prev.map(m => (m.id === id ? { ...m, isNew: false } : m))), 500);
-              scrollToBottom();
-            }
-            if (t?.audioUrl) {
-              try {
-                const fullUrl = getFullAudioUrl(t.audioUrl);
-                logAudioUrl(t.audioUrl, fullUrl, 'InterviewProcess:TestMessage');
-                if (audioRef.current) audioRef.current.pause();
-                const audio = new Audio(fullUrl);
-                audioRef.current = audio;
-                setIsAISpeaking(true);
-                audio.onended = () => { setIsAISpeaking(false); };
-                audio.onerror = () => { setIsAISpeaking(false); };
-                await audio.play();
-              } catch {
-                setIsAISpeaking(false);
-              }
+            if (t?.text || t?.audioUrl) {
+              setTimeout(async () => {
+                if (t?.text) {
+                  const id = `test-msg`;
+                  setMessages(prev => [...prev, { id, content: t.text!, isVisible: true, isNew: true } as any]);
+                  setTimeout(() => setMessages(prev => prev.map(m => (m.id === id ? { ...m, isNew: false } : m))), 500);
+                  scrollToBottom();
+                }
+                if (t?.audioUrl) {
+                  try {
+                    const fullUrl = getFullAudioUrl(t.audioUrl);
+                    logAudioUrl(t.audioUrl, fullUrl, 'InterviewProcess:TestMessage');
+                    if (audioRef.current) audioRef.current.pause();
+                    const audio = new Audio(fullUrl);
+                    audioRef.current = audio;
+                    setIsAISpeaking(true);
+                    audio.onended = () => { setIsAISpeaking(false); };
+                    audio.onerror = () => { setIsAISpeaking(false); };
+                    await audio.play();
+                  } catch {
+                    setIsAISpeaking(false);
+                  }
+                }
+              }, 1000);
             }
             // Scroll updates
             setTimeout(() => scrollToBottom(), 10);
@@ -264,7 +268,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
 
   const addQuestionCard = useCallback((questionIndex: number, textOverride?: string) => {
     console.log(`➕ Adding question card ${questionIndex + 1}`);
-    const base = createQuestionCard(questionIndex, processQuestions);
+    const base = createQuestionCard(questionIndex, []);
     const newQuestionCard = { ...base, text: textOverride ?? base.text } as QuestionCard;
     setQuestionCards(prev => {
       const id = `question-card-${Math.max(0, questionIndex)}`;
