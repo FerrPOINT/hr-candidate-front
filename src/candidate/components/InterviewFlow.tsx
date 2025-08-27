@@ -51,9 +51,9 @@ export function InterviewFlow() {
     switch (stage) {
       case 'auth':
         return (
-          <AuthForm 
+          <AuthForm
             onContinue={handleAuthSuccess}
-            interviewId={1}
+            positionId={1}
           />
         );
       
@@ -71,7 +71,7 @@ export function InterviewFlow() {
       
       case 'interview':
         return (
-          <InterviewProcess />
+          <InterviewProcess interviewId={1} />
         );
       
       default:

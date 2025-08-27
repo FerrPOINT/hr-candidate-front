@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QuestionResponseInterface, COMPANY_QUESTIONS, Question } from './QuestionResponseInterface';
 
@@ -8,6 +8,7 @@ interface CandidateQuestionsProps {
   onNewMessage?: () => void;
   onAddAiMessage?: (content: string) => void;
   onAddUserMessage?: (content: string) => void;
+  questionsOverride?: Question[]; // опциональный список вопросов из API
 }
 
 interface DialogHistory {
@@ -16,74 +17,35 @@ interface DialogHistory {
   timestamp: Date;
 }
 
-export function CandidateQuestions({ onComplete, onAISpeakingChange, onNewMessage, onAddAiMessage, onAddUserMessage }: CandidateQuestionsProps) {
-  const [showIntroMessages, setShowIntroMessages] = useState(true);
+export function CandidateQuestions({ onComplete, onAISpeakingChange, onNewMessage, onAddAiMessage, onAddUserMessage, questionsOverride }: CandidateQuestionsProps) {
+  const [showIntroMessages, setShowIntroMessages] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [showQuestionButtons, setShowQuestionButtons] = useState(false); // Изменено на false
+  const [showQuestionButtons, setShowQuestionButtons] = useState(true);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [askedQuestions, setAskedQuestions] = useState<Set<string>>(new Set());
   const [showFinalMessages, setShowFinalMessages] = useState(false);
   const [finalMessageIndex, setFinalMessageIndex] = useState(0);
   const [dialogHistory, setDialogHistory] = useState<DialogHistory[]>([]);
 
-  // Мемоизированные сообщения
-  const introMessages = useMemo(() => [
-    "Хорошая работа! Спасибо!",
-    "Мы рассмотрим твои ответы и свяжемся с тобой как можно скорее.", 
-    "А пока возможно есть вопросы, на которые я могла бы ответить ? Выбери из списка ниже."
-  ], []);
-
-  const finalMessages = useMemo(() => [
-    "Отлично! Я записала всю информацию и передам ее твоему рекрутеру. Если у тебя в будущем появятся вопросы, не стесняйся обращаться к нам.",
-    "Хорошего дня!"
-  ], []);
-
-  // Интро: отправляем в чат по одному
+  // Интро-сообщения отключены: сразу показываем кнопки
   useEffect(() => {
-    if (!showIntroMessages || currentMessageIndex >= introMessages.length) {
-      if (showIntroMessages && currentMessageIndex >= introMessages.length) {
-        const timer = setTimeout(() => {
-          setShowIntroMessages(false);
-          setShowQuestionButtons(true);
-          onNewMessage?.();
-        }, 800);
-        return () => clearTimeout(timer);
-      }
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      const content = introMessages[currentMessageIndex];
-      onAddAiMessage?.(content);
-      setCurrentMessageIndex(prev => prev + 1);
+    setShowIntroMessages(false);
+    setShowQuestionButtons(true);
+    // Прокрутить вниз, чтобы список был в зоне видимости
+    setTimeout(() => {
       onNewMessage?.();
-    }, 1200);
-    
-    return () => clearTimeout(timer);
-  }, [showIntroMessages, currentMessageIndex, introMessages, onAddAiMessage, onNewMessage]);
+    }, 0);
+  }, []);
 
-  // Финальные сообщения: отправляем в чат
+  // Финальные сообщения отключены: завершаем без отправки AI-сообщений
   useEffect(() => {
-    if (!showFinalMessages || finalMessageIndex >= finalMessages.length) {
-      if (showFinalMessages && finalMessageIndex >= finalMessages.length) {
-        const timer = setTimeout(() => {
-          onAISpeakingChange?.(false);
-          onComplete?.();
-        }, 1500);
-        return () => clearTimeout(timer);
-      }
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      const content = finalMessages[finalMessageIndex];
-      onAddAiMessage?.(content);
-      setFinalMessageIndex(prev => prev + 1);
-      onNewMessage?.();
-    }, 1800);
-    
-    return () => clearTimeout(timer);
-  }, [showFinalMessages, finalMessageIndex, finalMessages, onAISpeakingChange, onNewMessage, onAddAiMessage, onComplete]);
+    if (!showFinalMessages) return;
+    const t = setTimeout(() => {
+      onAISpeakingChange?.(false);
+      onComplete?.();
+    }, 300);
+    return () => clearTimeout(t);
+  }, [showFinalMessages, onAISpeakingChange, onComplete]);
 
   const handleQuestionSelect = useCallback((question: Question) => {
     console.log('CandidateQuestions: Selecting question:', question.question);
@@ -113,10 +75,8 @@ export function CandidateQuestions({ onComplete, onAISpeakingChange, onNewMessag
     onAddUserMessage?.(question.question);
     onAddAiMessage?.(question.answer);
     
-    // Уведомляем о новом контенте
-    setTimeout(() => {
-      onNewMessage?.();
-    }, 100);
+    // Уведомляем о новом контенте (прокрутка)
+    setTimeout(() => onNewMessage?.(), 0);
   }, [selectedQuestion, onNewMessage, onAddAiMessage, onAddUserMessage]);
 
   const handleFinish = useCallback(() => {
@@ -141,20 +101,14 @@ export function CandidateQuestions({ onComplete, onAISpeakingChange, onNewMessag
     setSelectedQuestion(null);
     setShowQuestionButtons(false);
     
-    // Показываем финальные сообщения AI после сообщения пользователя
-    setTimeout(() => {
-      setShowFinalMessages(true);
-      setFinalMessageIndex(0);
-      onAISpeakingChange?.(true);
-      setTimeout(() => {
-        onNewMessage?.();
-      }, 100);
-    }, 800);
+    // Финальные AI-сообщения отключены: просто триггерим завершение по флагу
+    setTimeout(() => setShowFinalMessages(true), 200);
   }, [selectedQuestion, onAISpeakingChange, onNewMessage, onAddUserMessage]);
 
   const getAvailableQuestions = useCallback(() => {
-    return COMPANY_QUESTIONS.filter(q => !askedQuestions.has(q.id)).slice(0, 6);
-  }, [askedQuestions]);
+    const source = (questionsOverride && questionsOverride.length > 0) ? questionsOverride : COMPANY_QUESTIONS;
+    return source.filter(q => !askedQuestions.has(q.id)).slice(0, 6);
+  }, [askedQuestions, questionsOverride]);
 
   const availableQuestions = getAvailableQuestions();
 

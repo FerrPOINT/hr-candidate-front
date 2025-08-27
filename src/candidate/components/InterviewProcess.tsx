@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from './';
 import { HelpModal, HelpButton, WMTLogo } from './';
 import { InstructionsModal } from './InstructionsModal';
@@ -23,7 +22,20 @@ import { MicrophoneTestCard } from './interview/MicrophoneTestCard';
 import { ReadingTestCard } from './interview/ReadingTestCard';
 import { CandidateQuestions } from './CandidateQuestions';
 
-export function InterviewProcess() {
+interface InterviewProcessProps {
+  interviewId: number;
+  token?: string;
+  jobPosition?: {
+    title: string;
+    department: string;
+    company: string;
+    type: string;
+    questionsCount: number;
+  };
+  candidateId?: string;
+}
+
+export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessProps) {
   const [stage, setStage] = useState<ProcessStage>('welcome');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(150);
@@ -40,7 +52,7 @@ export function InterviewProcess() {
   const [isAISpeaking, setIsAISpeaking] = useState(true);
   const [showMicrophoneCard, setShowMicrophoneCard] = useState(false);
   const [timerStarted, setTimerStarted] = useState(false);
-  const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
+  const [totalQuestions, setTotalQuestions] = useState<number | null>(jobPosition?.questionsCount || null);
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState<number | null>(null);
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null);
   const [initialData, setInitialData] = useState<any | null>(null);
@@ -54,6 +66,7 @@ export function InterviewProcess() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const skipQuestionFnRef = useRef<(() => void) | null>(null);
+  const isStopInProgressRef = useRef<boolean>(false);
 
   // Аудио воспроизведение welcome-сообщений из API
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -63,18 +76,9 @@ export function InterviewProcess() {
   const positiveResponsesRef = useRef<{ text?: string; audioUrl?: string }[]>([]);
   const negativeResponsesRef = useRef<{ text?: string; audioUrl?: string }[]>([]);
   const additionalQuestionsRef = useRef<{ question?: string; answer?: string }[]>([]);
+  const currentQuestionIdRef = useRef<number | null>(null);
 
-  // Получаем interviewId из URL (без изменения роутинга)
-  const location = useLocation();
-  const interviewId = useMemo(() => {
-    const parts = location.pathname.split('/');
-    const idx = parts.indexOf('interview');
-    if (idx !== -1 && parts[idx + 1]) {
-      const parsed = parseInt(parts[idx + 1], 10);
-      return Number.isFinite(parsed) ? parsed : 1;
-    }
-    return 1;
-  }, [location.pathname]);
+  // interviewId теперь приходит из пропсов (Single Page)
 
   // Функция для показа ошибки и блокировки интервью
   const showError = useCallback((errorMessage: string) => {
@@ -132,21 +136,8 @@ export function InterviewProcess() {
         setShowMicrophoneCard(false);
         setMessages([]);
         
-        // Сначала проверяем localStorage на наличие сохраненных данных
-        const savedData = localStorage.getItem('interview_data');
-        let resp;
-        
-        if (savedData) {
-          // Используем сохраненные данные
-          console.log('Using saved interview data from localStorage');
-          resp = { data: JSON.parse(savedData) };
-          // Очищаем localStorage после использования
-          localStorage.removeItem('interview_data');
-        } else {
-          // Загружаем данные заново
-          console.log('Loading interview data from API');
-          resp = await apiClient.candidates.getInterviewData(interviewId);
-        }
+        // Загружаем данные интервью напрямую из API (Single Page, без localStorage)
+        const resp = await apiClient.candidates.getInterviewData(interviewId);
         
         if (isCancelled) return;
         setInitialData(resp.data);
@@ -269,37 +260,20 @@ export function InterviewProcess() {
 
 
 
-  // Timer logic
-  useEffect(() => {
-    if ((stage === 'question' || stage === 'recording-answer') && timerStarted && timeRemaining > 0) {
-      timerRef.current = setTimeout(() => {
-        setTimeRemaining(prev => {
-          const newTime = prev - 1;
-          console.log(`⏰ Timer tick: ${newTime} seconds remaining`, { stage, timerStarted });
-          setQuestionCards(prev => updateQuestionTime(prev, newTime));
-          return newTime;
-        });
-      }, 1000);
-    } else if (timeRemaining === 0 && (stage === 'question' || stage === 'recording-answer') && timerStarted) {
-      // Время истекло — действуем как «пропуск вопроса»
-      console.log('⏰ Time up for question', currentQuestionIndex + 1);
-      if (skipQuestionFnRef.current) {
-        skipQuestionFnRef.current();
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [timeRemaining, stage, timerStarted, currentQuestionIndex]);
+  // Timer logic — moved below to avoid using handlers before declaration
 
   const addQuestionCard = useCallback((questionIndex: number, textOverride?: string) => {
     console.log(`➕ Adding question card ${questionIndex + 1}`);
     const base = createQuestionCard(questionIndex, processQuestions);
     const newQuestionCard = { ...base, text: textOverride ?? base.text } as QuestionCard;
-    setQuestionCards(prev => [...prev, newQuestionCard]);
+    setQuestionCards(prev => {
+      const id = `question-card-${Math.max(0, questionIndex)}`;
+      if (prev.some(card => card.id === id)) {
+        console.log('🔁 Skip adding duplicate question card', { id });
+        return prev;
+      }
+      return [...prev, newQuestionCard];
+    });
     
     // Добавляем question card в сообщения
     const questionCardMsg = { 
@@ -334,6 +308,7 @@ export function InterviewProcess() {
 
   // Event handlers
   const { isRecording: isRec, startRecording, stopRecording, audioBlob, clearAudio } = useAudioRecording();
+  const [isPendingMicUpload, setIsPendingMicUpload] = useState(false);
 
   const handleMicrophoneTest = useCallback(() => {
     console.log('🎤 Starting microphone test');
@@ -342,14 +317,7 @@ export function InterviewProcess() {
     void startRecording();
     setIsAISpeaking(false);
     
-    // Добавляем сообщение с просьбой прочитать предложение (появляется после нажатия кнопки)
-    const readingMessage = { 
-      id: 'reading-message', 
-      content: 'Прочитай предложение "Хотите понять других – пристальнее смотрите в самого себя."', 
-      isVisible: true, 
-      isNew: true
-    } as any;
-    setMessages(prev => [...prev, readingMessage]);
+
     
     // Агрессивный скролл после добавления сообщения
     setTimeout(() => scrollToBottom(), 10);
@@ -364,82 +332,103 @@ export function InterviewProcess() {
   }, []);
 
   const handleStopMicrophoneTest = useCallback(async () => {
+    if (isStopInProgressRef.current) { return; }
+    isStopInProgressRef.current = true;
     console.log('⏹️ Stopping microphone test');
     setIsRecording(false);
     try {
       stopRecording();
     } catch {}
     setIsTranscribing(true);
+    // Включаем реактивное ожидание появления blob и отправки
+    setIsPendingMicUpload(true);
+  }, [audioBlob, clearAudio, interviewId, scrollToBottom, stopRecording, showError]);
 
-    // Дожидаемся появления blob из хука
-    const waitForBlob = async (retries = 20): Promise<Blob | null> => {
-      for (let i = 0; i < retries; i++) {
-        if (audioBlob) return audioBlob;
-        await new Promise(r => setTimeout(r, 50));
-      }
-      return audioBlob || null;
-    };
-    const blob = await waitForBlob();
-    try {
-      let resp: any = { data: {} };
-      if (blob) {
-        const file = new File([blob], 'mic-test.wav', { type: 'audio/wav' });
+  // Реактивная отправка тестовой записи, когда blob готов
+  useEffect(() => {
+    const upload = async () => {
+      if (!isPendingMicUpload || !audioBlob) return;
+      try {
+        let resp: any = { data: {} };
+        const fileType = audioBlob.type || 'audio/webm';
+        const fileExt = fileType.includes('wav') ? 'wav' : (fileType.includes('ogg') ? 'ogg' : 'webm');
+
+        const file = new File([audioBlob], `mic-test.${fileExt}`, { type: fileType });
         resp = await apiClient.candidates.testMicrophone(interviewId, file);
-      }
-      setIsTranscribing(false);
+        setIsTranscribing(false);
 
-      // Показываем пользовательское сообщение (эмуляция текста, без аудио)
-      if (blob) {
-        const userMsg = { 
-          id: 'user-response', 
-          content: 'Тестовая запись отправлена', 
-          isVisible: true, 
-          isNew: true, 
-          isUser: true 
-        } as any;
+        // Сообщение пользователю
+        const userMsg = { id: 'user-response', content: 'Тестовая запись отправлена', isVisible: true, isNew: true, isUser: true } as any;
         setMessages(prev => [...prev, userMsg]);
         setTimeout(() => scrollToBottom(), 10);
-      }
 
-      const isOk = (resp.data as any)?.isReadyForInterview === true;
-      const responses = isOk ? positiveResponsesRef.current : negativeResponsesRef.current;
+        const isOk = (resp.data as any)?.isReadyForInterview === true;
+        const responses = isOk ? positiveResponsesRef.current : negativeResponsesRef.current;
 
-      // Проигрываем один ответ из списка (первый), затем, если ok, показываем кнопку продолжения
-      const item = responses[0];
-      if (item?.text) {
-        const id = `test-feedback-${Date.now()}`;
-        setMessages(prev => [...prev, { id, content: item.text!, isVisible: true, isNew: true } as any]);
-        setTimeout(() => setMessages(prev => prev.map(m => (m.id === id ? { ...m, isNew: false } : m))), 500);
-        scrollToBottom();
-      }
-      if (item?.audioUrl) {
-        try {
-          const fullUrl = getFullAudioUrl(item.audioUrl);
-          logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:TestFeedback');
-          if (audioRef.current) audioRef.current.pause();
-          const audio = new Audio(fullUrl);
-          audioRef.current = audio;
-          setIsAISpeaking(true);
-          audio.onended = () => { setIsAISpeaking(false); };
-          audio.onerror = () => { setIsAISpeaking(false); };
-          await audio.play();
-        } catch { setIsAISpeaking(false); }
-      }
+        // Проигрываем все сообщения из responses по очереди
+        const playResponses = async (idx: number) => {
+          if (idx >= responses.length) {
+            // Все сообщения проиграны
+            if (!isOk) {
+              setStage('welcome');
+              setShowMicrophoneCard(true);
+            } else {
+              setShowContinueButton(true);
+            }
+            return;
+          }
 
-      if (isOk) {
-        setShowContinueButton(true);
-      } else {
-        // Разрешаем повтор теста — просто оставляем кнопку «Тест микрофона» видимой
-        setShowMicrophoneCard(true);
+          const item = responses[idx];
+          if (item?.text) {
+            const id = `test-feedback-${idx}-${Date.now()}`;
+            setMessages(prev => [...prev, { id, content: item.text!, isVisible: true, isNew: true } as any]);
+            setTimeout(() => setMessages(prev => prev.map(m => (m.id === id ? { ...m, isNew: false } : m))), 500);
+            scrollToBottom();
+          }
+
+          if (item?.audioUrl) {
+            try {
+              const fullUrl = getFullAudioUrl(item.audioUrl);
+              logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:TestFeedback');
+              if (audioRef.current) audioRef.current.pause();
+              const audio = new Audio(fullUrl);
+              audioRef.current = audio;
+              setIsAISpeaking(true);
+              audio.onended = () => { 
+                setIsAISpeaking(false); 
+                playResponses(idx + 1);
+              };
+              audio.onerror = () => { 
+                setIsAISpeaking(false); 
+                playResponses(idx + 1);
+              };
+              await audio.play();
+            } catch {
+              setIsAISpeaking(false);
+              playResponses(idx + 1);
+            }
+          } else {
+            // Нет аудио - переходим к следующему сообщению через небольшую паузу
+            setTimeout(() => {
+              playResponses(idx + 1);
+            }, 800);
+          }
+        };
+
+        // Запускаем проигрывание всех сообщений
+        playResponses(0);
+      } catch (e: any) {
+        setIsTranscribing(false);
+        const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка тестирования микрофона';
+        showError(errorMessage);
+      } finally {
+        setIsPendingMicUpload(false);
+        clearAudio();
+        isStopInProgressRef.current = false;
       }
-      clearAudio();
-    } catch (e: any) {
-      setIsTranscribing(false);
-      const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка тестирования микрофона';
-      showError(errorMessage);
-      clearAudio();
-    }
-  }, [audioBlob, clearAudio, interviewId, scrollToBottom, stopRecording, showError]);
+    };
+    void upload();
+  }, [isPendingMicUpload, audioBlob, interviewId, clearAudio, scrollToBottom, showError]);
 
   const handleStartInterview = useCallback(async () => {
     console.log('🚀 Starting interview');
@@ -466,23 +455,7 @@ export function InterviewProcess() {
           try { await apiClient.candidates.endInterview(interviewId); } catch {}
           const playCompletion = async (idx: number) => {
             if (idx >= completionQueueRef.current.length) {
-              // После completion — дополнительные вопросы
-              const list = additionalQuestionsRef.current || [];
-              list.forEach((item, i) => {
-                if (item?.question) {
-                  const idQ = `add-q-${i}-${Date.now()}`;
-                  setMessages(prev => [...prev, { id: idQ, content: item.question!, isVisible: true, isNew: true } as any]);
-                  setTimeout(() => setMessages(prev => prev.map(m => (m.id === idQ ? { ...m, isNew: false } : m))), 500);
-                }
-                if (item?.answer) {
-                  const idA = `add-a-${i}-${Date.now()}`;
-                  setMessages(prev => [...prev, { id: idA, content: item.answer!, isVisible: true, isNew: true, isUser: true } as any]);
-                  setTimeout(() => setMessages(prev => prev.map(m => (m.id === idA ? { ...m, isNew: false } : m))), 500);
-                }
-              });
-              setTimeout(() => scrollToBottom(), 10);
-              setTimeout(() => scrollToBottom(), 100);
-              setTimeout(() => scrollToBottom(), 300);
+              // После completion переходим к candidate-questions без автозаливки в чат
               setStage('candidate-questions');
               return;
             }
@@ -514,7 +487,11 @@ export function InterviewProcess() {
           return;
         }
 
+        // ВАЖНО: сначала фиксируем идентификатор текущего вопроса
         setCurrentQuestionId(data.questionId || null);
+        currentQuestionIdRef.current = (data.questionId as any) ?? null;
+        console.log('🆔 Set currentQuestionId from getCurrentQuestion:', currentQuestionIdRef.current);
+
         const qNum = ((data as any).index ?? 1) - 1;
         setCurrentQuestionNumber((data as any).index || 1);
         setTotalQuestions((data as any).total || null);
@@ -559,43 +536,43 @@ export function InterviewProcess() {
   }, [currentQuestionIndex, startRecording]);
 
   const handleSkipQuestion = useCallback(async () => {
-    console.log(`⏭️ Skipping question ${currentQuestionIndex + 1}`);
+    console.log(`⏭️ Skipping question ${currentQuestionIndex + 1}`, {
+      interviewId,
+      currentQuestionId: currentQuestionIdRef.current,
+      reason: 'user_action_or_timeout'
+    });
     completeQuestion(currentQuestionIndex);
     setTimerStarted(false);
     setTimeRemaining(150);
     try {
-      if (currentQuestionId != null) {
-        // Пропуск: skip=true без аудио
-        await apiClient.candidates.submitAnswer(interviewId, currentQuestionId, true);
+      if (currentQuestionIdRef.current != null) {
+        console.log('📤 submitAnswer(skip=true) → sending', {
+          interviewId,
+          questionId: currentQuestionIdRef.current,
+          skip: true
+        });
+        await apiClient.candidates.submitAnswer(interviewId, currentQuestionIdRef.current, true);
+        console.log('✅ submitAnswer(skip=true) → success');
+      } else {
+        console.warn('⚠️ Cannot submit skip: currentQuestionId is null');
       }
     } catch (e: any) {
       const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка отправки ответа';
+      console.error('❌ submitAnswer(skip=true) failed:', errorMessage, e);
       showError(errorMessage);
       return;
     }
 
     try {
+      console.log('🔄 Fetching next question after skip', { interviewId });
       const { data } = await apiClient.candidates.getCurrentQuestion(interviewId);
+      console.log('📥 getCurrentQuestion →', data);
       if (!data || !data.questionId) {
+        console.log('🏁 No more questions, ending interview', { interviewId });
         try { await apiClient.candidates.endInterview(interviewId); } catch {}
         const playCompletion = async (idx: number) => {
           if (idx >= completionQueueRef.current.length) {
-            const list = additionalQuestionsRef.current || [];
-            list.forEach((item, i) => {
-              if (item?.question) {
-                const idQ = `add-q-${i}-${Date.now()}`;
-                setMessages(prev => [...prev, { id: idQ, content: item.question!, isVisible: true, isNew: true } as any]);
-                setTimeout(() => setMessages(prev => prev.map(m => (m.id === idQ ? { ...m, isNew: false } : m))), 500);
-              }
-              if (item?.answer) {
-                const idA = `add-a-${i}-${Date.now()}`;
-                setMessages(prev => [...prev, { id: idA, content: item.answer!, isVisible: true, isNew: true, isUser: true } as any]);
-                setTimeout(() => setMessages(prev => prev.map(m => (m.id === idA ? { ...m, isNew: false } : m))), 500);
-              }
-            });
-            setTimeout(() => scrollToBottom(), 10);
-            setTimeout(() => scrollToBottom(), 100);
-            setTimeout(() => scrollToBottom(), 300);
+            // Переход к candidate-questions без автозаливки
             setStage('candidate-questions');
             return;
           }
@@ -628,6 +605,8 @@ export function InterviewProcess() {
       }
 
       setCurrentQuestionId(data.questionId || null);
+      currentQuestionIdRef.current = (data.questionId as any) ?? null;
+      console.log('🆔 Set currentQuestionId from getCurrentQuestion (after skip):', currentQuestionIdRef.current);
       const qNumber = (((data as any).index ?? (currentQuestionIndex + 2)) as number) - 1;
       setCurrentQuestionNumber((data as any).index || (qNumber + 1));
       setTotalQuestions((data as any).total || totalQuestions);
@@ -637,120 +616,8 @@ export function InterviewProcess() {
       setTimeout(() => setQuestionCards(prev => prev.map(card => card.id === cardId ? { ...card, isNew: false } : card)), 500);
       scrollToBottom();
 
-      setIsAISpeaking(false);
-      setTimerStarted(false);
-      setTimeRemaining(150);
-      if (data.audioUrl) {
-        try {
-          const fullUrl = getFullAudioUrl(data.audioUrl);
-          logAudioUrl(data.audioUrl, fullUrl, 'InterviewProcess:Question');
-          if (audioRef.current) audioRef.current.pause();
-          const audio = new Audio(fullUrl);
-          audioRef.current = audio;
-          setIsAISpeaking(true);
-          audio.onended = () => { setIsAISpeaking(false); setTimerStarted(true); };
-          audio.onerror = () => { setIsAISpeaking(false); setTimerStarted(true); };
-          await audio.play();
-        } catch {
-          setIsAISpeaking(false);
-          setTimerStarted(true);
-        }
-      } else {
-        setTimerStarted(true);
-      }
-    } catch (e: any) {
-      const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка получения следующего вопроса';
-      showError(errorMessage);
-    }
-  }, [currentQuestionIndex, completeQuestion, addQuestionCard, currentQuestionId, interviewId, totalQuestions, scrollToBottom, showError]);
-
-  // Даем таймеру доступ к логике пропуска
-  useEffect(() => {
-    skipQuestionFnRef.current = () => { void handleSkipQuestion(); };
-  }, [handleSkipQuestion]);
-
-  const handleStopRecording = useCallback(async () => {
-    console.log('⏹️ Stopping recording for question', currentQuestionIndex + 1);
-    setIsRecording(false);
-    try { stopRecording(); } catch {}
-    setIsTranscribing(true);
-
-    // Дождаться blob
-    const waitForBlob = async (retries = 20): Promise<Blob | null> => {
-      for (let i = 0; i < retries; i++) {
-        if (audioBlob) return audioBlob;
-        await new Promise(r => setTimeout(r, 50));
-      }
-      return audioBlob || null;
-    };
-    const blob = await waitForBlob();
-
-    try {
-      setIsSavingAnswer(true);
-      if (currentQuestionId != null && blob) {
-        const file = new File([blob], 'answer.wav', { type: 'audio/wav' });
-        await apiClient.candidates.submitAnswer(interviewId, currentQuestionId, false, file);
-      }
-      setIsSavingAnswer(false);
-      setIsTranscribing(false);
-      completeQuestion(currentQuestionIndex);
-
-      // Получаем следующий вопрос
-      const { data } = await apiClient.candidates.getCurrentQuestion(interviewId);
-      if (!data || !data.questionId) {
-        try { await apiClient.candidates.endInterview(interviewId); } catch {}
-        const playCompletion = async (idx: number) => {
-          if (idx >= completionQueueRef.current.length) {
-            const list = additionalQuestionsRef.current || [];
-            list.forEach((item, i) => {
-              if (item?.question) {
-                const idQ = `add-q-${i}-${Date.now()}`;
-                setMessages(prev => [...prev, { id: idQ, content: item.question!, isVisible: true, isNew: true } as any]);
-                setTimeout(() => setMessages(prev => prev.map(m => (m.id === idQ ? { ...m, isNew: false } : m))), 500);
-              }
-              if (item?.answer) {
-                const idA = `add-a-${i}-${Date.now()}`;
-                setMessages(prev => [...prev, { id: idA, content: item.answer!, isVisible: true, isNew: true, isUser: true } as any]);
-                setTimeout(() => setMessages(prev => prev.map(m => (m.id === idA ? { ...m, isNew: false } : m))), 500);
-              }
-            });
-            setTimeout(() => scrollToBottom(), 10);
-            setTimeout(() => scrollToBottom(), 100);
-            setTimeout(() => scrollToBottom(), 300);
-            setStage('candidate-questions');
-            return;
-          }
-          const item = completionQueueRef.current[idx];
-          setMessages(prev => [...prev, { id: item.id, content: item.text, isVisible: true, isNew: true } as any]);
-          setTimeout(() => setMessages(prev => prev.map(m => (m.id === item.id ? { ...m, isNew: false } : m))), 500);
-          scrollToBottom();
-          if (item.audioUrl) {
-            try {
-              const fullUrl = getFullAudioUrl(item.audioUrl);
-              logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Completion');
-              if (audioRef.current) audioRef.current.pause();
-              const audio = new Audio(fullUrl);
-              audioRef.current = audio;
-              setIsAISpeaking(true);
-              audio.onended = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
-              audio.onerror = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
-              await audio.play();
-            } catch { setIsAISpeaking(false); playCompletion(idx + 1); }
-          } else { setIsAISpeaking(false); playCompletion(idx + 1); }
-        };
-        playCompletion(0);
-        return;
-      }
-
-      setCurrentQuestionId(data.questionId || null);
-      const qNumber = (((data as any).index ?? (currentQuestionIndex + 2)) as number) - 1;
-      setCurrentQuestionNumber((data as any).index || (qNumber + 1));
-      setTotalQuestions((data as any).total || totalQuestions);
-      setCurrentQuestionIndex(Math.max(0, qNumber));
-      addQuestionCard(Math.max(0, qNumber), data.text || '');
-      const cardId = `question-card-${Math.max(0, qNumber)}`;
-      setTimeout(() => setQuestionCards(prev => prev.map(card => card.id === cardId ? { ...card, isNew: false } : card)), 500);
-      scrollToBottom();
+      // Важно: переходим в стадию вопроса, чтобы кнопки отрисовались
+      setStage('question');
 
       setIsAISpeaking(false);
       setTimerStarted(false);
@@ -767,16 +634,196 @@ export function InterviewProcess() {
           audio.onerror = () => { setIsAISpeaking(false); setTimerStarted(true); };
           await audio.play();
         } catch { setIsAISpeaking(false); setTimerStarted(true); }
-      } else {
-        setTimerStarted(true);
-      }
+      } else { setTimerStarted(true); }
     } catch (e: any) {
-      setIsTranscribing(false);
-      setIsSavingAnswer(false);
-      const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка отправки ответа';
+      const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка получения следующего вопроса';
+      console.error('❌ getCurrentQuestion after skip failed:', errorMessage, e);
       showError(errorMessage);
     }
-  }, [addQuestionCard, audioBlob, completeQuestion, currentQuestionId, currentQuestionIndex, interviewId, scrollToBottom, stopRecording, totalQuestions, showError]);
+  }, [currentQuestionIndex, completeQuestion, addQuestionCard, interviewId, totalQuestions, scrollToBottom, showError]);
+
+  // Даем таймеру доступ к логике пропуска
+  useEffect(() => {
+    skipQuestionFnRef.current = () => { void handleSkipQuestion(); };
+  }, [handleSkipQuestion]);
+
+  const handleStopRecording = useCallback(() => {
+    if (isStopInProgressRef.current || isSavingAnswer || isTranscribing) {
+      console.log('⏹️ Stop ignored: in-progress');
+      return;
+    }
+    isStopInProgressRef.current = true;
+    console.log('⏹️ Stopping recording for question', currentQuestionIndex + 1, {
+      interviewId,
+      currentQuestionId: currentQuestionIdRef.current,
+      stage
+    });
+    setIsRecording(false);
+    setIsTranscribing(true);
+    setIsSavingAnswer(true);
+
+    stopRecording()
+      .then((blob) => {
+        if (!currentQuestionIdRef.current) {
+          throw new Error('Не удалось определить вопрос для ответа');
+        }
+        if (!blob || blob.size === 0) {
+          throw new Error('Аудиозапись пустая');
+        }
+        const fileType = blob.type || 'audio/webm';
+        const fileExt = fileType.includes('wav') ? 'wav' : (fileType.includes('ogg') ? 'ogg' : 'webm');
+        const file = new File([blob], `answer.${fileExt}`, { type: fileType });
+        console.log('📤 submitAnswer(skip=false) → sending', {
+          interviewId,
+          questionId: currentQuestionIdRef.current,
+          skip: false,
+          fileType: file.type,
+          fileSize: file.size
+        });
+        return apiClient.candidates.submitAnswer(interviewId, currentQuestionIdRef.current, false, file);
+      })
+      .then((resp: any) => {
+        console.log('✅ submitAnswer(skip=false) → success', resp?.data);
+        setIsSavingAnswer(false);
+        setIsTranscribing(false);
+        completeQuestion(currentQuestionIndex);
+        // Если API явно говорит, что следующего вопроса нет — запускаем completion без лишнего запроса
+        if (resp && resp.data && resp.data.nextQuestion === false) {
+          console.log('🏁 nextQuestion=false in submitAnswer response — finishing interview');
+          // Остановка таймера немедленно, чтобы не тикал во время completion
+          setTimerStarted(false);
+          const playCompletion = (idx: number): Promise<void> => {
+            if (idx >= completionQueueRef.current.length) {
+              // Переход к candidate-questions без автозаливки
+              setStage('candidate-questions');
+              return Promise.resolve();
+            }
+            const item = completionQueueRef.current[idx];
+            setMessages(prev => [...prev, { id: item.id, content: item.text, isVisible: true, isNew: true } as any]);
+            setTimeout(() => setMessages(prev => prev.map(m => (m.id === item.id ? { ...m, isNew: false } : m))), 500);
+            scrollToBottom();
+            if (item.audioUrl) {
+              try {
+                const fullUrl = getFullAudioUrl(item.audioUrl);
+                logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Completion');
+                if (audioRef.current) audioRef.current.pause();
+                const audio = new Audio(fullUrl);
+                audioRef.current = audio;
+                setIsAISpeaking(true);
+                return new Promise<void>((resolve) => {
+                  audio.onended = () => { setIsAISpeaking(false); void playCompletion(idx + 1).then(resolve); };
+                  audio.onerror = () => { setIsAISpeaking(false); void playCompletion(idx + 1).then(resolve); };
+                  audio.play().catch(() => { setIsAISpeaking(false); void playCompletion(idx + 1).then(resolve); });
+                });
+              } catch {
+                setIsAISpeaking(false);
+                return playCompletion(idx + 1);
+              }
+            } else {
+              setIsAISpeaking(false);
+              return playCompletion(idx + 1);
+            }
+          };
+          return apiClient.candidates.endInterview(interviewId)
+            .catch(() => undefined)
+            .then(() => playCompletion(0))
+            .then(() => null as any); // Явно возвращаем null, чтобы следующий then пропустил обработку
+        }
+        console.log('🔄 Fetching next question after answer', { interviewId });
+        return apiClient.candidates.getCurrentQuestion(interviewId);
+      })
+      .then((resp: any) => {
+        // Если предыдущая ветка уже завершила интервью, ничего не делаем
+        if (!resp || !resp.data) {
+          return undefined;
+        }
+        const { data } = resp;
+        console.log('📥 getCurrentQuestion →', data);
+        if (!data || !data.questionId) {
+          console.log('🏁 No more questions, ending interview', { interviewId });
+          // Проигрываем completion-сообщения по аналогии с пропуском
+          const playCompletion = (idx: number): Promise<void> => {
+            if (idx >= completionQueueRef.current.length) {
+              // Переход к candidate-questions без автозаливки
+              setStage('candidate-questions');
+              return Promise.resolve();
+            }
+            const item = completionQueueRef.current[idx];
+            setMessages(prev => [...prev, { id: item.id, content: item.text, isVisible: true, isNew: true } as any]);
+            setTimeout(() => setMessages(prev => prev.map(m => (m.id === item.id ? { ...m, isNew: false } : m))), 500);
+            scrollToBottom();
+            if (item.audioUrl) {
+              try {
+                const fullUrl = getFullAudioUrl(item.audioUrl);
+                logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Completion');
+                if (audioRef.current) audioRef.current.pause();
+                const audio = new Audio(fullUrl);
+                audioRef.current = audio;
+                setIsAISpeaking(true);
+                return new Promise<void>((resolve) => {
+                  audio.onended = () => { setIsAISpeaking(false); void playCompletion(idx + 1).then(resolve); };
+                  audio.onerror = () => { setIsAISpeaking(false); void playCompletion(idx + 1).then(resolve); };
+                  audio.play().catch(() => { setIsAISpeaking(false); void playCompletion(idx + 1).then(resolve); });
+                });
+              } catch {
+                setIsAISpeaking(false);
+                return playCompletion(idx + 1);
+              }
+            } else {
+              setIsAISpeaking(false);
+              return playCompletion(idx + 1);
+            }
+          };
+          return apiClient.candidates.endInterview(interviewId)
+            .catch(() => undefined)
+            .then(() => playCompletion(0));
+        }
+        setCurrentQuestionId(data.questionId || null);
+        currentQuestionIdRef.current = (data.questionId as any) ?? null;
+        console.log('🆔 Set currentQuestionId from getCurrentQuestion (after answer):', currentQuestionIdRef.current);
+        const qNumber = (((data as any).index ?? (currentQuestionIndex + 2)) as number) - 1;
+        setCurrentQuestionNumber((data as any).index || (qNumber + 1));
+        setTotalQuestions((data as any).total || totalQuestions);
+        setCurrentQuestionIndex(Math.max(0, qNumber));
+        addQuestionCard(Math.max(0, qNumber), data.text || '');
+        const cardId = `question-card-${Math.max(0, qNumber)}`;
+        setTimeout(() => setQuestionCards(prev => prev.map(card => card.id === cardId ? { ...card, isNew: false } : card)), 500);
+        scrollToBottom();
+        setStage('question');
+        setTimerStarted(false);
+        setTimeRemaining(150);
+        // Если у следующего вопроса есть аудио — воспроизводим его и запускаем таймер по окончании, иначе сразу стартуем таймер
+        if (data.audioUrl) {
+          try {
+            const fullUrl = getFullAudioUrl(data.audioUrl);
+            logAudioUrl(data.audioUrl, fullUrl, 'InterviewProcess:Question');
+            if (audioRef.current) audioRef.current.pause();
+            const audio = new Audio(fullUrl);
+            audioRef.current = audio;
+            setIsAISpeaking(true);
+            audio.onended = () => { setIsAISpeaking(false); setTimerStarted(true); };
+            audio.onerror = () => { setIsAISpeaking(false); setTimerStarted(true); };
+            audio.play().catch(() => { setIsAISpeaking(false); setTimerStarted(true); });
+          } catch {
+            setIsAISpeaking(false);
+            setTimerStarted(true);
+          }
+        } else {
+          setTimerStarted(true);
+        }
+        return undefined;
+      })
+      .catch((e: any) => {
+        const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка отправки ответа';
+        console.error('❌ submitAnswer(chain) failed:', errorMessage, e);
+        showError(errorMessage);
+      })
+      .finally(() => {
+        setIsSavingAnswer(false);
+        setIsTranscribing(false);
+        isStopInProgressRef.current = false;
+      });
+  }, [currentQuestionIndex, interviewId, stopRecording, showError, scrollToBottom, completeQuestion, totalQuestions, addQuestionCard]);
 
   const handleCandidateQuestionsComplete = useCallback(() => {
     console.log('🎉 Interview completed');
@@ -846,6 +893,47 @@ export function InterviewProcess() {
     scrollToBottom();
   }, [scrollToBottom]);
 
+  // Timer logic (placed after handlers to avoid use-before-declare)
+  useEffect(() => {
+    if ((stage === 'question' || stage === 'recording-answer') && timerStarted && timeRemaining > 0) {
+      timerRef.current = setTimeout(() => {
+        setTimeRemaining(prev => {
+          const newTime = prev - 1;
+          console.log(`⏰ Timer tick: ${newTime} seconds remaining`, { stage, timerStarted });
+        setQuestionCards(prev => updateQuestionTime(prev, newTime));
+          return newTime;
+        });
+      }, 1000);
+    } else if (timeRemaining === 0 && (stage === 'question' || stage === 'recording-answer') && timerStarted) {
+      // Время истекло — если запись идёт, автоматически останавливаем запись и отправляем ответ; иначе пропуск
+      console.log('⏰ Time up for question', currentQuestionIndex + 1, {
+        interviewId,
+        currentQuestionId,
+        stage,
+      });
+      // Отключаем таймер, чтобы избежать повторных вызовов
+      setTimerStarted(false);
+      if (stage === 'recording-answer') {
+        console.log('⏹️ Auto-stopping recording due to timeout');
+        // Останавливаем запись и инициируем отправку ответа
+        handleStopRecording();
+      } else {
+        if (skipQuestionFnRef.current) {
+          console.log('⏭️ Calling skipQuestion() due to time up');
+          skipQuestionFnRef.current();
+        } else {
+          console.warn('⚠️ skipQuestionFnRef is not set');
+        }
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [timeRemaining, stage, timerStarted, currentQuestionIndex, handleStopRecording]);
+
   // Debug info for current state
   console.log('🎯 Current state:', {
     stage,
@@ -901,15 +989,8 @@ export function InterviewProcess() {
                 </div>
               ) : (
                 <div className={`flex ${('isUser' in message && message.isUser) ? 'justify-end' : 'justify-start'}`}>
-                  {message.id === 'reading-message' ? (
-                    <div className="bg-white rounded-br-[24px] rounded-tl-[24px] rounded-tr-[24px] border border-[#e2e4e9] px-8 py-6 max-w-[421px]">
-                      <h3 className="text-[#e16349] text-[16px] leading-[24px] tracking-[0.96px] uppercase font-medium font-Inter mb-3">
-                        Прочитай предложение
-                      </h3>
-                      <p className="text-[#0a0d14] text-[16px] leading-[24px] tracking-[-0.176px] font-medium font-Inter">
-                        {message.content}
-                      </p>
-                    </div>
+                  {message.id === 'test-msg' ? (
+                    <ReadingTestCard />
                   ) : (
                     <MessageBubble 
                       content={message.content} 
@@ -931,6 +1012,13 @@ export function InterviewProcess() {
             onNewMessage={handleNewMessage}
             onAddAiMessage={handleAddAiMessage}
             onAddUserMessage={handleAddUserMessage}
+            questionsOverride={(additionalQuestionsRef.current || [])
+              .map((item, idx) => ({
+                id: `api-q-${idx}`,
+                question: item?.question || '',
+                answer: item?.answer || ''
+              }))
+              .filter(q => !!q.question)}
           />
         )}
       </div>
@@ -958,7 +1046,7 @@ export function InterviewProcess() {
   // Кастомная кнопка "Остановить запись" по образцу из Figma
   const RecordingButton = () => (
     <button
-      onClick={stage === 'recording-test' ? handleStopMicrophoneTest : handleStopRecording}
+      onClick={stage === 'recording-answer' ? handleStopRecording : handleStopMicrophoneTest}
       className="bg-[#df1c41] relative rounded-[60px] h-16 w-auto hover:bg-[#c7193a] transition-colors duration-200 pulse-recording"
     >
       <div className="flex flex-row items-center relative size-full">
@@ -1099,7 +1187,10 @@ export function InterviewProcess() {
                   )}
 
                   {/* Recording Buttons */}
-                  {((stage === 'recording-answer' && isRecording) || (stage === 'recording-test' && isRecording)) && (
+                  {stage === 'recording-answer' && isRecording && (
+                    <RecordingButton />
+                  )}
+                  {stage === 'recording-test' && isRecording && (
                     <RecordingButton />
                   )}
                 </div>

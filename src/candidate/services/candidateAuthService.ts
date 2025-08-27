@@ -22,6 +22,8 @@ export interface AuthResponse {
   candidateId?: string;
   message?: string;
   error?: string;
+  interviewId?: number;
+  token?: string;
 }
 
 class CandidateAuthService {
@@ -46,33 +48,25 @@ class CandidateAuthService {
 
       console.log('📥 Получен ответ от candidateApiService:', response);
 
-      // Сохраняем данные кандидата в localStorage
-      if (response.candidate?.id) {
-        console.log('💾 Сохраняем candidateId в localStorage:', response.candidate.id);
-        localStorage.setItem(CandidateAuthService.CANDIDATE_ID_KEY, String(response.candidate.id));
-      }
-
-      // В CandidateLoginResponse нет токена - он будет получен только после верификации
-      // Токен сохраняем только если верификация не требуется (но это не должно происходить)
-      if (response.verificationRequired) {
-        console.log('✅ Верификация требуется, возвращаем успех');
+      // API по OpenAPI возвращает interview и verificationRequired
+      if (response.verificationRequired && (response as any).interview?.id) {
+        const interviewId = Number((response as any).interview.id);
+        console.log('✅ Верификация требуется, interviewId:', interviewId);
         return {
           success: true,
-          candidateId: response.candidate?.id ? String(response.candidate.id) : undefined,
+          interviewId,
           message: 'Требуется верификация email'
         };
       } else {
-        // Если верификация не требуется, значит что-то пошло не так
-        console.warn('⚠️ Неожиданный ответ: верификация не требуется, но токен не предоставлен');
+        console.warn('⚠️ Неожиданный ответ при аутентификации, нет interview.id');
         return {
           success: false,
-          error: 'Ошибка аутентификации: неожиданный ответ от сервера'
+          error: 'Ошибка аутентификации: отсутствует interview.id'
         };
       }
     } catch (error: any) {
       console.error('💥 Ошибка в candidateAuthService.authenticate:', error);
       
-      // Специальная обработка для случая когда кандидат не найден
       const errorMessage = error.message || 'Ошибка аутентификации';
       if (errorMessage.includes('не назначено собеседование') ||
           errorMessage.toLowerCase().includes('found user false') ||
@@ -98,12 +92,6 @@ class CandidateAuthService {
   async verifyEmail(email: string, verificationCode: string): Promise<AuthResponse> {
     try {
       console.log('Starting email verification:', { email, code: verificationCode });
-      
-      // Получаем данные кандидата из localStorage для верификации
-      const candidateId = this.getCandidateId();
-      if (!candidateId) {
-        throw new Error('Кандидат не найден. Сначала пройдите авторизацию.');
-      }
 
       // Используем новый endpoint verifyCandidateEmail
       const response = await candidateApiService.verifyCandidateEmail({
@@ -113,14 +101,12 @@ class CandidateAuthService {
 
       console.log('Email verification response:', response);
 
-      // После успешной верификации сохраняем токен
-      if (response.token && response.success) {
-        localStorage.setItem(CandidateAuthService.AUTH_TOKEN_KEY, response.token);
-      }
+      const interviewId = response?.interview?.id as number | undefined;
 
       return {
         success: response.success,
-        candidateId: response.candidate?.id ? String(response.candidate.id) : undefined,
+        interviewId,
+        token: (response as any)?.token,
         message: response.success ? 'Email успешно верифицирован' : 'Ошибка верификации email'
       };
     } catch (error: any) {
@@ -137,14 +123,14 @@ class CandidateAuthService {
    * Получение ID кандидата из localStorage
    */
   getCandidateId(): string | null {
-    return localStorage.getItem(CandidateAuthService.CANDIDATE_ID_KEY);
+    return null;
   }
 
   /**
    * Получение токена авторизации
    */
   getAuthToken(): string | null {
-    return localStorage.getItem(CandidateAuthService.AUTH_TOKEN_KEY);
+    return null;
   }
 
   /**
@@ -175,32 +161,17 @@ class CandidateAuthService {
   /**
    * Сохранение данных кандидата
    */
-  saveCandidateData(data: any): void {
-    if (data.id) {
-      localStorage.setItem(CandidateAuthService.CANDIDATE_ID_KEY, data.id);
-    }
-    if (data.token) {
-      localStorage.setItem(CandidateAuthService.AUTH_TOKEN_KEY, data.token);
-    }
-  }
+  saveCandidateData(_data: any): void {}
 
   /**
    * Проверка авторизации
    */
-  isAuthenticated(): boolean {
-    const candidateId = this.getCandidateId();
-    const token = this.getAuthToken();
-    return !!(candidateId && token);
-  }
+  isAuthenticated(): boolean { return false; }
 
   /**
    * Очистка данных авторизации
    */
-  clearAuth(): void {
-    localStorage.removeItem(CandidateAuthService.CANDIDATE_ID_KEY);
-    localStorage.removeItem(CandidateAuthService.AUTH_TOKEN_KEY);
-    console.log('Auth data cleared');
-  }
+  clearAuth(): void { console.log('Auth data cleared'); }
 
   /**
    * Получение информации о кандидате

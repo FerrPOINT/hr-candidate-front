@@ -203,33 +203,41 @@ class CandidateApiService {
     questionsCount: number 
   }> {
     try {
-      console.log('Getting position summary for positionId:', positionId);
+      console.log('🔍 Getting position summary for positionId:', positionId);
       
       // Используем публичный клиент без токена
-      const response = await apiService.getPublicApiClient().candidates.getPositionSummary(positionId);
-      console.log('API response for position summary:', response.data);
+      const response = await apiService.getPublicApiClient().candidates.getCandidatePositionSummary(positionId);
+      console.log('📥 API response for position summary:', response.data);
+      
+      const raw: any = response.data ?? {};
+      const mappedQuestionsCount = (
+        raw.questionsCount ??
+        raw.totalQuestions ??
+        raw.questions_total ??
+        raw.questions_count ??
+        (Array.isArray(raw.questions) ? raw.questions.length : undefined)
+      );
+      
+      if (typeof mappedQuestionsCount !== 'number' || Number.isNaN(mappedQuestionsCount)) {
+        throw new Error('Некорректное поле количества вопросов в ответе API');
+      }
         
-      // API возвращает только id, title, questionsCount
-      // Остальные поля заполняем дефолтными значениями
-      return {
-        id: response.data.id,
-        title: response.data.title,
-        department: 'Engineering', // Дефолтное значение
-        company: 'WMT group',     // Дефолтное значение
-        type: 'Full-time',        // Дефолтное значение
-        questionsCount: response.data.questionsCount
-      };
-    } catch (error: any) {
-      console.error('Error getting position summary:', error);
-      // Fallback данные - используются только если API недоступен
-      return {
-        id: positionId,
-        title: 'Software Engineer',
+      // API может возвращать только часть полей — остальные заполняем константами брендинга
+      const result = {
+        id: raw.id,
+        title: raw.title,
         department: 'Engineering',
         company: 'WMT group',
         type: 'Full-time',
-        questionsCount: 3
+        questionsCount: mappedQuestionsCount
       };
+      
+      console.log('✅ Final position summary:', result);
+      return result;
+    } catch (error: any) {
+      console.error('❌ Error getting position summary:', error);
+      // Больше не подставляем фиктивные значения — пробрасываем ошибку, чтобы UI показал её явно
+      throw new Error(error?.message || 'Не удалось получить информацию о вакансии');
     }
   }
 

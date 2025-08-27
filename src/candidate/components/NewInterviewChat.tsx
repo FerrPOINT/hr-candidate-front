@@ -415,7 +415,7 @@ export function NewInterviewChat() {
 
   // Render screens based on stage
   if (stage === 'auth') {
-    return <AuthForm onContinue={handleAuthComplete} interviewId={1} />;
+    return <AuthForm onContinue={handleAuthComplete} positionId={1} />;
   }
 
   if (stage === 'email-verification') {

@@ -11,24 +11,45 @@ export const useAudioRecording = () => {
   const audioChunksRef = useRef<Blob[]>([]);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const stopPromiseRef = useRef<{ resolve: (b: Blob | null) => void; reject: (e: any) => void } | null>(null);
 
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      // Prefer a widely supported mimeType when available
+      const preferredMime = 'audio/webm';
+      const canUsePreferred = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(preferredMime);
+      const mediaRecorder = canUsePreferred ? new MediaRecorder(stream, { mimeType: preferredMime }) : new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      setAudioBlob(null);
+      setAudioUrl(null);
 
       mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        setAudioBlob(audioBlob);
-        setAudioUrl(audioUrl);
-        stream.getTracks().forEach(track => track.stop());
+        try {
+          const chunkType = audioChunksRef.current[0]?.type || mediaRecorder.mimeType || 'audio/webm';
+          const blob = new Blob(audioChunksRef.current, { type: chunkType });
+          const url = URL.createObjectURL(blob);
+          setAudioBlob(blob);
+          setAudioUrl(url);
+          stream.getTracks().forEach(track => track.stop());
+          // Разрешаем промис остановки, если ждут
+          if (stopPromiseRef.current) {
+            stopPromiseRef.current.resolve(blob);
+            stopPromiseRef.current = null;
+          }
+        } catch (e) {
+          if (stopPromiseRef.current) {
+            stopPromiseRef.current.resolve(null);
+            stopPromiseRef.current = null;
+          }
+        }
       };
 
       mediaRecorder.start();
@@ -46,23 +67,34 @@ export const useAudioRecording = () => {
     }
   }, []);
 
-  const stopRecording = useCallback(() => {
+  const stopRecording = useCallback((): Promise<Blob | null> => {
     if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+      const p = new Promise<Blob | null>((resolve, reject) => {
+        stopPromiseRef.current = { resolve, reject };
+      });
+      try {
+        // Запрос последнего чанка до остановки
+        mediaRecorderRef.current.requestData?.();
+      } catch {}
+      // Небольшая задержка, чтобы дать fired ondataavailable
+      setTimeout(() => {
+        try { mediaRecorderRef.current?.stop(); } catch {}
+      }, 30);
       setIsRecording(false);
-      
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      return p;
     }
-  }, [isRecording]);
+    return Promise.resolve(audioBlob);
+  }, [isRecording, audioBlob]);
 
   const toggleRecording = useCallback(() => {
     if (isRecording) {
-      stopRecording();
+      void stopRecording();
     } else {
-      startRecording();
+      void startRecording();
     }
   }, [isRecording, startRecording, stopRecording]);
 

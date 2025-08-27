@@ -66,13 +66,13 @@ export function QuestionResponseInterface({
     // Сбрасываем состояния
     setShowNewQuestions(false);
     
-    // Уведомляем о новом вопросе
-    onNewMessage?.();
+    // Уведомляем о новом вопросе (прокрутка)
+    setTimeout(() => onNewMessage?.(), 0);
     
     // Показываем кнопки через небольшую задержку
     const buttonsTimer = setTimeout(() => {
       setShowNewQuestions(true);
-      onNewMessage?.();
+      setTimeout(() => onNewMessage?.(), 0);
     }, 1000);
     
     return () => clearTimeout(buttonsTimer);

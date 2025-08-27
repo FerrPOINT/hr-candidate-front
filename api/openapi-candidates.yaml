@@ -24,7 +24,7 @@ paths:
 
   /candidates/positions/{positionId}/summary:
     get:
-      operationId: getPositionSummary
+      operationId: getCandidatePositionSummary
       tags:
         - Candidates
       summary: Получение краткой информации о вакансии (Публичный endpoint)
@@ -136,7 +136,7 @@ paths:
               $ref: '#/components/schemas/CandidateEmailVerificationRequest'
       responses:
         '200':
-          description: Email успешно верифицирован, JWT токен выдан
+          description: Email успешно верифицирован, выдан JWT и возвращена информация об интервью
           content:
             application/json:
               schema:
@@ -459,7 +459,7 @@ components:
         - REJECTED
         - HIRED
 
-    Candidate:
+    Interview:
       allOf:
         - $ref: '#/components/schemas/BaseEntity'
         - $ref: '#/components/schemas/BaseCandidateFields'
@@ -569,11 +569,11 @@ components:
     CandidateLoginResponse:
       type: object
       required:
-        - candidate
+        - interview
         - verificationRequired
       properties:
-        candidate:
-          $ref: '#/components/schemas/Candidate'
+        interview:
+          $ref: '#/components/schemas/Interview'
           description: Данные кандидата
         verificationRequired:
           type: boolean
@@ -586,24 +586,50 @@ components:
       type: object
       required:
         - success
-        - candidate
+        - token
+        - interview
       properties:
         success:
           type: boolean
           description: true - верификация успешна, false - верификация не удалась
-        candidate:
-          $ref: '#/components/schemas/Candidate'
-          description: Данные кандидата
-        token:
-          type: string
-          description: JWT токен для авторизованного доступа (только при успешной верификации)
-        interviewId:
-          type: integer
-          format: int64
-          description: ID активного собеседования для кандидата (только при успешной верификации)
         message:
           type: string
           description: Информационное сообщение о результате верификации
+        token:
+          type: string
+          description: JWT токен для авторизованного доступа (только при успешной верификации)
+        interview:
+          type: object
+          description: Основная информация об интервью (без служебных полей)
+          properties:
+            id:
+              type: integer
+              format: int64
+              description: ID интервью
+            firstName:
+              type: string
+              description: Имя кандидата
+            lastName:
+              type: string
+              description: Фамилия кандидата
+            email:
+              type: string
+              format: email
+              description: Email кандидата
+            emailVerified:
+              type: boolean
+              description: Признак подтверждения email
+            positionId:
+              type: integer
+              format: int64
+              description: ID позиции (вакансии), с которой связано интервью
+          required:
+            - id
+            - firstName
+            - lastName
+            - email
+            - emailVerified
+            - positionId
 
     InterviewQuestionResponse:
       type: object

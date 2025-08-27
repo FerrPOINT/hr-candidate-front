@@ -3,7 +3,7 @@ import { Button } from './';
 import { Input } from './ui/input';
 import { WMTLogo } from './';
 import { HelpButton, HelpModal } from './';
-import { Mail, CheckCircle2, RefreshCw, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { RefreshCw, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { candidateAuthService } from '../services/candidateAuthService';
 
 interface JobPosition {
@@ -16,59 +16,24 @@ interface JobPosition {
 
 interface EmailVerificationProps {
   email: string;
-  onContinue: (verificationCode: string) => void;
+  onContinue: (verificationCode: string, token?: string, interviewId?: number) => void;
   onGoBack: () => void;
   interviewId: number;
+  jobPosition?: JobPosition; // Добавляем данные о вакансии
 }
 
 
 
-export function EmailVerification({ email, onContinue, onGoBack, interviewId }: EmailVerificationProps) {
+export function EmailVerification({ email, onContinue, onGoBack, interviewId, jobPosition }: EmailVerificationProps) {
   const [code, setCode] = useState('');
   const [isResending, setIsResending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [error, setError] = useState('');
-  const [sentCode] = useState('123456'); // Simulate sent code
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [jobPosition, setJobPosition] = useState<JobPosition | null>(null);
-  const [isLoadingPosition, setIsLoadingPosition] = useState(true);
 
-  // Загружаем информацию о вакансии при монтировании компонента
-  useEffect(() => {
-    const loadPositionInfo = async () => {
-      try {
-        setIsLoadingPosition(true);
-        // Получаем краткую информацию о вакансии через новый API
-        const positionSummary = await candidateAuthService.getPositionSummary(interviewId);
-        
-        // Используем полную информацию из API
-        setJobPosition({
-          title: positionSummary.title,
-          department: positionSummary.department,
-          company: positionSummary.company,
-          type: positionSummary.type,
-          questionsCount: positionSummary.questionsCount
-        });
-      } catch (error) {
-        console.error('Error loading position info:', error);
-        // В случае ошибки используем заглушку
-        setJobPosition({
-          title: 'Software Engineer',
-          department: 'Engineering',
-          company: 'WMT group',
-          type: 'Full-time',
-          questionsCount: 3
-        });
-      } finally {
-        setIsLoadingPosition(false);
-      }
-    };
-
-    if (interviewId) {
-      loadPositionInfo();
-    }
-  }, [interviewId]);
+  // Убираем заглушку - используем переданные данные
+  const isLoadingPosition = false; // Всегда false, так как данные передаются сверху
 
   useEffect(() => {
     if (countdown > 0) {
@@ -87,6 +52,11 @@ export function EmailVerification({ email, onContinue, onGoBack, interviewId }: 
   };
 
   const handleVerifyCode = async () => {
+    // Защита от двойного вызова
+    if (isVerifying) {
+      return;
+    }
+    
     setError('');
     
     if (!code.trim()) {
@@ -101,16 +71,24 @@ export function EmailVerification({ email, onContinue, onGoBack, interviewId }: 
 
     setIsVerifying(true);
     
-    // Simulate API call for verification
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Simulate code verification
-    if (code === sentCode) {
-      // Убираем промежуточное состояние и сразу переходим к следующему этапу
-      onContinue(code);
-    } else {
+    try {
+      console.log('🔍 EmailVerification.handleVerifyCode - начинаем верификацию:', { email, code: code.trim() });
+      
+      // Реальный вызов API для верификации
+      const response = await candidateAuthService.verifyEmail(email, code.trim());
+      
+      console.log('📥 EmailVerification.handleVerifyCode - ответ от API:', response);
+      
+      if (response.success) {
+        onContinue(code, response.token, response.interviewId);
+      } else {
+        setError(response.error || 'Неверный код. Проверьте код в письме и попробуйте снова');
+      }
+    } catch (error: any) {
+      console.error('Email verification error:', error);
+      setError(error.message || 'Произошла ошибка при верификации email');
+    } finally {
       setIsVerifying(false);
-      setError('Неверный код. Проверьте код в письме и попробуйте снова');
     }
   };
 

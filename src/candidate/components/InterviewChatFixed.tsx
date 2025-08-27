@@ -163,7 +163,7 @@ export function InterviewChat() {
 
   // Auth screen
   if (stage === 'auth') {
-    return <AuthForm onContinue={handleAuthComplete} interviewId={1} />;
+    return <AuthForm onContinue={handleAuthComplete} positionId={1} />;
   }
 
   // Email verification screen  

@@ -3,7 +3,7 @@ import { Button } from './';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { WMTLogo, HelpButton, HelpModal } from './';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { candidateAuthService } from '../services/candidateAuthService';
 
 interface JobPosition {
@@ -15,29 +15,27 @@ interface JobPosition {
 }
 
 interface AuthFormProps {
-  onContinue: (userData: { firstName: string; lastName: string; email: string }) => void;
-  interviewId: number; // Теперь принимаем interviewId вместо готовой jobPosition
+  onContinue: (userData: { firstName: string; lastName: string; email: string; jobPosition?: JobPosition; interviewId?: number }) => void;
+  positionId: number; // ID вакансии, а не интервью
 }
 
-export function AuthForm({ onContinue, interviewId }: AuthFormProps) {
+export function AuthForm({ onContinue, positionId }: AuthFormProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [serverError, setServerError] = useState<string>('');
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [jobPosition, setJobPosition] = useState<JobPosition | null>(null);
   const [isLoadingPosition, setIsLoadingPosition] = useState(true);
 
-  // Загружаем информацию о вакансии при монтировании компонента
+  // Загружаем информацию о вакансии при монтировании компонента (без localStorage)
   useEffect(() => {
     const loadPositionInfo = async () => {
       try {
         setIsLoadingPosition(true);
-        // Получаем краткую информацию о вакансии через новый API
-        const positionSummary = await candidateAuthService.getPositionSummary(interviewId);
-        
-        // Используем полную информацию из API
+        const positionSummary = await candidateAuthService.getPositionSummary(positionId);
         setJobPosition({
           title: positionSummary.title,
           department: positionSummary.department,
@@ -47,23 +45,17 @@ export function AuthForm({ onContinue, interviewId }: AuthFormProps) {
         });
       } catch (error) {
         console.error('Error loading position info:', error);
-        // В случае ошибки используем заглушку
-        setJobPosition({
-          title: 'Software Engineer',
-          department: 'Engineering',
-          company: 'WMT group',
-          type: 'Full-time',
-          questionsCount: 3
-        });
+        // Не подставляем фиктивные данные, оставляем jobPosition = null — UI покажет ошибку
+        setJobPosition(null);
       } finally {
         setIsLoadingPosition(false);
       }
     };
 
-    if (interviewId) {
-      loadPositionInfo();
+    if (positionId) {
+      void loadPositionInfo();
     }
-  }, [interviewId]);
+  }, [positionId]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -83,6 +75,7 @@ export function AuthForm({ onContinue, interviewId }: AuthFormProps) {
     }
 
     setErrors(newErrors);
+    setServerError(''); // Очищаем серверную ошибку при новой попытке
     return Object.keys(newErrors).length === 0;
   };
 
@@ -90,10 +83,44 @@ export function AuthForm({ onContinue, interviewId }: AuthFormProps) {
     e.preventDefault();
     if (validateForm()) {
       setIsLoading(true);
-      // Имитируем API запрос
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setIsLoading(false);
-      onContinue({ firstName, lastName, email });
+      setServerError('');
+      
+      // Отладочный вывод данных
+      console.log('🔍 AuthForm.handleSubmit - данные формы:', {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        positionId: positionId
+      });
+      
+      try {
+        // Реальный вызов API для аутентификации
+        const response = await candidateAuthService.authenticate({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim(),
+          positionId: positionId
+        });
+        
+        console.log('📥 AuthForm.handleSubmit - ответ от API:', response);
+        
+        if (response.success) {
+          onContinue({ 
+            firstName: firstName.trim(), 
+            lastName: lastName.trim(), 
+            email: email.trim(),
+            jobPosition: jobPosition || undefined,
+            interviewId: typeof response.interviewId === 'number' ? response.interviewId : undefined
+          });
+        } else {
+          setServerError(response.error || 'Ошибка аутентификации');
+        }
+      } catch (error: any) {
+        console.error('Authentication error:', error);
+        setServerError(error.message || 'Произошла ошибка при авторизации');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -213,6 +240,14 @@ export function AuthForm({ onContinue, interviewId }: AuthFormProps) {
                               )}
                             </div>
                           </div>
+
+                          {/* Server Error Display */}
+                          {serverError && (
+                            <div className="flex items-center gap-2 text-red-500 bg-red-50 border border-red-200 rounded-lg p-3">
+                              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                              <span className="text-sm">{serverError}</span>
+                            </div>
+                          )}
 
                           <div className="pt-1">
                             <Button

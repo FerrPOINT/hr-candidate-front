@@ -27,17 +27,30 @@ const CandidateEmailVerification: React.FC = () => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   
   const email = searchParams.get('email') || '';
-  // Не подставляем дефолт 1 — используем только переданный id
-  const interviewId = searchParams.get('interviewId') || '';
+  // На этой стадии в URL передаём positionId (а не interviewId)
+  const positionId = searchParams.get('positionId') || '';
 
   // Моковые данные о вакансии
-  const jobPosition: JobPosition = {
-    title: "Software Engineer",
-    department: "Engineering",
-    company: "WMT group",
-    type: "Full-time",
-    questionsCount: 3
-  };
+  const [jobPosition, setJobPosition] = useState<JobPosition | null>(null);
+  const [isLoadingPosition, setIsLoadingPosition] = useState<boolean>(true);
+
+  useEffect(() => {
+    // Читаем заранее загруженный summary из localStorage
+    try {
+      const raw = localStorage.getItem('position_summary');
+      if (raw) {
+        const summary = JSON.parse(raw);
+        setJobPosition({
+          title: summary.title,
+          department: summary.department,
+          company: summary.company,
+          type: summary.type,
+          questionsCount: summary.questionsCount
+        });
+      }
+    } catch {}
+    setIsLoadingPosition(false);
+  }, [positionId]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -69,8 +82,8 @@ const CandidateEmailVerification: React.FC = () => {
     }
 
     // Проверяем корректность interviewId
-    if (!interviewId || isNaN(parseInt(interviewId, 10))) {
-      setError('Некорректный или отсутствующий interviewId');
+    if (!positionId || isNaN(parseInt(positionId, 10))) {
+      setError('Некорректный или отсутствующий positionId');
       return;
     }
 
@@ -82,6 +95,10 @@ const CandidateEmailVerification: React.FC = () => {
       
       if (response.success) {
         console.log('Email verification successful:', response);
+        const verifiedInterviewId = response.interviewId;
+        if (!verifiedInterviewId) {
+          throw new Error('ID собеседования не найден');
+        }
         // После успешной верификации запрашиваем данные интервью
         try {
           const token = candidateAuthService.getAuthToken();
@@ -91,7 +108,7 @@ const CandidateEmailVerification: React.FC = () => {
           
           // Запрашиваем данные интервью
           const { apiService } = await import('../../services/apiService');
-          const interviewData = await apiService.getApiClient().candidates.getInterviewData(parseInt(interviewId, 10));
+          const interviewData = await apiService.getApiClient().candidates.getInterviewData(verifiedInterviewId);
           
           console.log('Interview data loaded successfully:', interviewData);
           
@@ -99,7 +116,7 @@ const CandidateEmailVerification: React.FC = () => {
           localStorage.setItem('interview_data', JSON.stringify(interviewData.data));
           
           // После успешной загрузки данных переходим к интервью
-          navigate(`/candidate/interview/${interviewId}`);
+          navigate(`/candidate/interview/${verifiedInterviewId}`);
         } catch (dataError: any) {
           console.error('Error loading interview data:', dataError);
           setError('Ошибка загрузки данных интервью. Попробуйте еще раз.');
@@ -174,10 +191,10 @@ const CandidateEmailVerification: React.FC = () => {
                         <div className="bg-[#e16349]/10 border border-[#e16349]/20 rounded-[20px] p-5 w-full">
                           <div className="text-center">
                             <h4 className="text-[#e16349] mb-2">
-                              {jobPosition.title}
+                              {isLoadingPosition ? '…' : (jobPosition?.title || '—')}
                             </h4>
                             <p className="text-gray-600">
-                              {jobPosition.company} • {jobPosition.questionsCount} вопросов
+                              {isLoadingPosition ? '…' : `${jobPosition?.company ?? '—'} • ${jobPosition?.questionsCount ?? '—'} вопросов`}
                             </p>
                           </div>
                         </div>

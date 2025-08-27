@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { AuthForm } from './components/AuthForm';
 import { EmailVerification } from './components/EmailVerification';
 import { InterviewProcess } from './components/InterviewProcess';
-import { candidateAuthService } from './services/candidateAuthService';
 import './styles/globals.css';
 
-type AppStage = 'auth' | 'email-verification' | 'interview-start' | 'interview';
+type AppStage = 'auth' | 'email-verification' | 'interview';
 
 interface UserData {
   firstName: string;
   lastName: string;
   email: string;
   interviewId?: number;
+  jobPosition?: JobPosition; // Добавляем данные о вакансии
+  candidateId?: string; // сохраняем id кандидата
 }
 
 interface JobPosition {
@@ -32,58 +33,31 @@ const defaultJobPosition: JobPosition = {
 };
 
 export default function App() {
-  const location = useLocation();
+  const { interviewId: urlInterviewId } = useParams<{ interviewId: string }>();
   
   const [currentStage, setCurrentStage] = useState<AppStage>('auth');
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [interviewId, setInterviewId] = useState<number>(parseInt(urlInterviewId || '1', 10));
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [jobPosition, setJobPosition] = useState<JobPosition | null>(null);
 
-  // Получаем interviewId из URL
-  const getInterviewIdFromUrl = (): number => {
-    const pathParts = location.pathname.split('/');
-    const interviewIndex = pathParts.indexOf('interview');
-    if (interviewIndex !== -1 && pathParts[interviewIndex + 1]) {
-      return parseInt(pathParts[interviewIndex + 1], 10);
-    }
-    return 1; // По умолчанию
-  };
-
-  const interviewId = getInterviewIdFromUrl();
-
-  // Обновляем стадию при изменении URL
-  useEffect(() => {
-    const getInitialStage = (): AppStage => {
-      if (location.pathname.includes('/interview/')) {
-        return 'interview';
-      }
-      if (location.pathname.includes('/verify-email')) {
-        return 'email-verification';
-      }
-      return 'auth';
-    };
-    
-    const newStage = getInitialStage();
-    setCurrentStage(newStage);
-  }, [location.pathname]);
+  // Для AuthForm нужен positionId (ID вакансии), используем тот же interviewId как positionId
+  // В реальном приложении это должны быть разные параметры
+  const positionId = parseInt(urlInterviewId || '1', 10);
 
   const handleAuthComplete = async (data: UserData) => {
     console.log('🔐 Auth completed:', data);
     
-    try {
-      // Проверяем наличие собеседования по email
-      const checkResponse = await candidateAuthService.checkInterviewExists(data.email);
-      
-      if (checkResponse.exists && checkResponse.interviewId) {
-        setUserData({ ...data, interviewId: checkResponse.interviewId });
-        setCurrentStage('email-verification');
-      } else {
-        // Собеседование не найдено
-        console.error('Interview not found:', checkResponse.message);
-        alert(checkResponse.message || 'Собеседование не найдено для данного email');
-      }
-    } catch (error) {
-      console.error('Authentication error:', error);
-      alert('Произошла ошибка при проверке собеседования');
+    // Если login вернул interviewId — фиксируем его как актуальный
+    if (typeof data.interviewId === 'number') {
+      setInterviewId(data.interviewId);
     }
+
+    setUserData(data);
+    if (data.jobPosition) {
+      setJobPosition(data.jobPosition);
+    }
+    setCurrentStage('email-verification');
   };
 
   const handleGoBackToAuth = () => {
@@ -91,44 +65,19 @@ export default function App() {
     setCurrentStage('auth');
   };
 
-  const handleEmailVerified = async (verificationCode: string) => {
-    console.log('✅ Email verification started:', verificationCode);
+  const handleEmailVerified = async (verificationCode: string, token?: string, interviewId?: number) => {
+    console.log('✅ Email verification completed, starting interview');
     
-    try {
-      // Верифицируем email и получаем JWT токен
-      const verifyResponse = await candidateAuthService.verifyEmail(userData?.email || '', verificationCode);
-      
-      if (verifyResponse.success) {
-        console.log('✅ Email verified, starting interview');
-        
-        // Получаем токен из localStorage
-        const token = candidateAuthService.getAuthToken();
-        if (!token) {
-          throw new Error('Токен авторизации не найден');
-        }
-        
-        // Запускаем собеседование
-        if (userData?.interviewId) {
-          const startResponse = await candidateAuthService.startInterview(userData.interviewId, token);
-          
-          if (startResponse.success) {
-            console.log('✅ Interview started, moving to interview process');
-            setCurrentStage('interview');
-          } else {
-            throw new Error(startResponse.message || 'Ошибка запуска собеседования');
-          }
-        } else {
-          throw new Error('ID собеседования не найден');
-        }
-      } else {
-        // Обработка ошибки верификации
-        console.error('Email verification failed:', verifyResponse.error);
-        alert(verifyResponse.error || 'Ошибка верификации email');
-      }
-    } catch (error: any) {
-      console.error('Email verification error:', error);
-      alert(error.message || 'Произошла ошибка при верификации email');
+    // Сохраняем токен и interviewId из ответа верификации
+    if (token) {
+      setAuthToken(token);
     }
+    if (interviewId) {
+      setInterviewId(interviewId);
+    }
+    
+    // Переходим к стадии интервью
+    setCurrentStage('interview');
   };
 
   const renderCurrentStage = () => {
@@ -137,7 +86,7 @@ export default function App() {
         return (
           <AuthForm 
             onContinue={handleAuthComplete}
-            interviewId={interviewId}
+            positionId={positionId}
           />
         );
       
@@ -148,29 +97,15 @@ export default function App() {
             onContinue={handleEmailVerified}
             onGoBack={handleGoBackToAuth}
             interviewId={interviewId}
+            jobPosition={jobPosition || undefined}
           />
-        );
-      
-      case 'interview-start':
-        return (
-          <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--interview-bg)' }}>
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4">Запуск собеседования...</h2>
-              <p className="text-gray-600">Пожалуйста, подождите</p>
-            </div>
-          </div>
         );
       
       case 'interview':
-        return <InterviewProcess />;
+        return <InterviewProcess interviewId={interviewId} token={authToken || undefined} jobPosition={jobPosition || undefined} />;
       
       default:
-        return (
-          <AuthForm 
-            onContinue={handleAuthComplete}
-            interviewId={interviewId}
-          />
-        );
+        return <div>Unknown stage</div>;
     }
   };
 
