@@ -1,5 +1,4 @@
-import { X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { X, Smartphone, Wifi, Shield, Chrome } from 'lucide-react';
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -9,68 +8,78 @@ interface HelpModalProps {
 export function HelpModal({ isOpen, onClose }: HelpModalProps) {
   if (!isOpen) return null;
 
+  const helpCards = [
+    {
+      number: "1",
+      title: "Запустите на другом устройстве",
+      icon: Smartphone
+    },
+    {
+      number: "2", 
+      title: "Проверьте интернет-соединение",
+      icon: Wifi
+    },
+    {
+      number: "3",
+      title: "Отключите VPN и блокировщики",
+      icon: Shield
+    },
+    {
+      number: "4",
+      title: "Используйте браузер Chrome",
+      icon: Chrome
+    }
+  ];
+
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="bg-white rounded-[32px] w-full max-w-2xl overflow-hidden relative shadow-2xl"
-        >
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-[32px] w-full max-w-3xl shadow-2xl animate-fade-in">
+        <div className="p-6">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-100">
-            <h3 className="text-xl font-semibold text-gray-900">Помощь</h3>
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-xs text-gray-500">
+              Если возникли технические проблемы во время собеседования:
+            </p>
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-300"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-gray-600" />
             </button>
           </div>
 
-          {/* Content */}
-          <div className="p-6">
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Как работает интервью?</h4>
-                <p className="text-gray-600 text-sm">
-                  Наш ИИ-ассистент проведет с вами дружескую беседу. Отвечайте на вопросы естественно, 
-                  приводите примеры из опыта. У вас будет 2 минуты 30 секунд на каждый ответ.
-                </p>
-              </div>
-              
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Технические требования</h4>
-                <ul className="text-gray-600 text-sm space-y-1">
-                  <li>• Работающий микрофон</li>
-                  <li>• Стабильное интернет-соединение</li>
-                  <li>• Современный браузер (Chrome, Firefox, Safari)</li>
-                </ul>
-              </div>
-              
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Что делать если возникли проблемы?</h4>
-                <p className="text-gray-600 text-sm">
-                  Если у вас возникли технические проблемы, попробуйте обновить страницу или 
-                  обратитесь в службу поддержки.
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Help Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {helpCards.map((card) => {
+              const IconComponent = card.icon;
+              return (
+                <div 
+                  key={card.number}
+                  className="bg-white border border-gray-100 rounded-[18px] p-5 flex items-center gap-4 hover:border-gray-200 transition-all duration-300 group cursor-pointer"
+                  style={{ boxShadow: 'var(--elevation-sm)' }}
+                >
+                  {/* Icon */}
+                  <div className="w-10 h-10 bg-[#e16349]/10 border border-[#e16349]/20 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-[#e16349]/15 transition-colors duration-300">
+                    <IconComponent className="w-5 h-5 text-[#e16349]" />
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="flex-1">
+                    <p className="text-[#0a0d14] font-semibold leading-tight">
+                      {card.title}
+                    </p>
+                  </div>
 
-          {/* Footer */}
-          <div className="flex justify-end p-6 border-t border-gray-100">
-            <button
-              onClick={onClose}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-medium transition-colors"
-            >
-              Понятно
-            </button>
+                  {/* Number badge */}
+                  <div className="w-6 h-6 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center text-xs font-medium group-hover:bg-gray-200 transition-all duration-300">
+                    {card.number}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </motion.div>
+        </div>
       </div>
-    </AnimatePresence>
+    </div>
   );
 } 

@@ -9,10 +9,12 @@ export function HelpButton({ onClick, className = '' }: HelpButtonProps) {
   return (
     <button
       onClick={onClick}
-      className={`p-2 rounded-full hover:bg-gray-100 transition-colors ${className}`}
-              style={{ color: '#3b82f6' }}
+      className={`flex items-center gap-2 px-2 py-1 hover:bg-white/20 rounded-xl transition-all text-[#e16349] hover:text-[#d55a42] ${className}`}
     >
-      <HelpCircle className="w-6 h-6" />
+      <HelpCircle className="w-8 h-8" />
+      <span className="text-lg font-medium">
+        Помощь
+      </span>
     </button>
   );
 } 
