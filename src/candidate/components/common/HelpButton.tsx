@@ -11,7 +11,7 @@ export function HelpButton({ onClick, className = '' }: HelpButtonProps) {
       onClick={onClick}
       className={`flex items-center gap-2 px-2 py-1 hover:bg-white/20 rounded-xl transition-all text-[#e16349] hover:text-[#d55a42] ${className}`}
     >
-      <HelpCircle className="w-8 h-8" />
+      <HelpCircle className="w-6 h-6" />
       <span className="text-lg font-medium">
         Помощь
       </span>

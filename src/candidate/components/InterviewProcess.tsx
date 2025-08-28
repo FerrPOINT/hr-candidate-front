@@ -100,8 +100,9 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
   // Функция для повторной попытки загрузки данных
   const retryLoading = useCallback(() => {
     hideError();
-    // Перезагружаем страницу для повторной попытки
-    window.location.reload();
+    // Сохраняем текущий путь и перезагружаем страницу
+    const currentPath = window.location.pathname;
+    window.location.href = currentPath;
   }, [hideError]);
 
   // НАДЕЖНАЯ функция автоскролла с несколькими попытками
