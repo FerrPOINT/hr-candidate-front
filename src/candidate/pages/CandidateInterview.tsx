@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { WMTLogo } from '../components/';
+import { Logo } from '../components/';
 import { HelpButton, HelpModal } from '../components/';
 import { candidateAuthService } from '../services/candidateAuthService';
 import { candidateApiService } from '../services/candidateApiService';
@@ -261,7 +261,7 @@ const CandidateInterview: React.FC = () => {
           
           {/* Header */}
           <div className="flex items-center justify-between w-full">
-            <WMTLogo size="medium" />
+            <Logo size="medium" />
             <HelpButton onClick={() => setIsHelpModalOpen(true)} />
           </div>
 

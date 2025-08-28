@@ -560,7 +560,7 @@ export function InterviewChat() {
             )}
             
             <div className="flex items-center gap-3">
-              <div className="w-6 h-6">
+              <div className="w-12 h-12">
                 <svg
                   className="block w-full h-full"
                   fill="none"
@@ -574,7 +574,7 @@ export function InterviewChat() {
                 </svg>
               </div>
               <span 
-                className="text-[#e16349] font-thin"
+                className="text-[#e16349] font-thin text-lg"
                 style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}
               >
                 Помощь

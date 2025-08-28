@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from './';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { WMTLogo, HelpButton, HelpModal } from './';
+import { Logo, HelpButton, HelpModal } from './';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { candidateAuthService } from '../services/candidateAuthService';
 
@@ -125,18 +125,9 @@ export function AuthForm({ onContinue, positionId }: AuthFormProps) {
   };
 
   return (
-    <div className="min-h-screen w-full" style={{ backgroundColor: 'var(--interview-bg)' }}>
-      <div className="w-full h-full flex flex-col">
-        <div className="flex flex-col gap-4 p-6 w-full h-full">
-          
-          {/* Header */}
-          <div className="flex items-center justify-between w-full">
-            <WMTLogo size="medium" />
-            <HelpButton onClick={() => setIsHelpModalOpen(true)} />
-          </div>
-
-          {/* Main Content - Compact version */}
-          <div className="flex-1 flex items-center justify-center px-4 mt-8">
+    <>
+      {/* Main Content - Compact version */}
+      <div className="flex-1 flex items-center justify-center px-4 mt-8">
             <div className="rounded-[44px] w-full max-w-2xl" style={{ backgroundColor: 'var(--interview-substrate)' }}>
               <div className="w-full h-full">
                 <div className="flex flex-col gap-6 p-6 w-full">
@@ -283,14 +274,12 @@ export function AuthForm({ onContinue, positionId }: AuthFormProps) {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
       </div>
 
       <HelpModal 
         isOpen={isHelpModalOpen} 
         onClose={() => setIsHelpModalOpen(false)} 
       />
-    </div>
+    </>
   );
 }

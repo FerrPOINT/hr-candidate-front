@@ -11,9 +11,9 @@
 // Доступные из кандидатов модели/типы
 export { CandidateStatusEnum } from '../../generated-src/client/models/candidate-status-enum';
 
-export type { 
-  Candidate 
-} from '../../generated-src/client/models/candidate';
+// Основные типы интервью
+export type { Interview } from '../../generated-src/client/models/interview';
+
 export type { 
   CandidateLoginRequest 
 } from '../../generated-src/client/models/candidate-login-request';
@@ -39,7 +39,6 @@ export type { InterviewQuestionResponse } from '../../generated-src/client/model
 export type { AdditionalQuestionsResponseInner as AdditionalQuestion } from '../../generated-src/client/models/additional-questions-response-inner';
 export type { CompletionResponse } from '../../generated-src/client/models/completion-response';
 export type { WelcomeMessagesResponse } from '../../generated-src/client/models/welcome-messages-response';
-export type { WelcomeMessagesResponseTestMessage } from '../../generated-src/client/models/welcome-messages-response-test-message';
 export type { MicrophoneTestResponse } from '../../generated-src/client/models/microphone-test-response';
 export type { SubmitAnswerResponse } from '../../generated-src/client/models/submit-answer-response';
 export type { PaginatedResponse } from '../../generated-src/client/models/paginated-response';

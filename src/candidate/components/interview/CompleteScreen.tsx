@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import { UserData, JobPosition } from './types';
-import { WMTLogo } from '../';
+import { Logo } from '../';
 import { HelpButton, HelpModal } from '../';
 
 interface CompleteScreenProps {
@@ -14,15 +14,7 @@ export function CompleteScreen({ userData, jobPosition }: CompleteScreenProps) {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   return (
-    <div className="bg-[#e9eae2] min-h-screen w-full">
-      <div className="w-full h-full flex flex-col">
-        <div className="flex flex-col gap-4 p-6 w-full h-full">
-          
-          {/* Header - унифицированный стиль */}
-          <div className="flex items-center justify-between w-full">
-            <WMTLogo size="medium" />
-            <HelpButton onClick={() => setIsHelpModalOpen(true)} />
-          </div>
+    <>
 
           {/* Main Content */}
           <div className="flex-1 flex items-center justify-center px-4 mt-8">
@@ -114,14 +106,12 @@ export function CompleteScreen({ userData, jobPosition }: CompleteScreenProps) {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
       </div>
 
       <HelpModal 
         isOpen={isHelpModalOpen} 
         onClose={() => setIsHelpModalOpen(false)} 
       />
-    </div>
+    </>
   );
 }

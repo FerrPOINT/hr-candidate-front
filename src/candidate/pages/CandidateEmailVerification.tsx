@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/';
 import { Input } from '../components/ui/input';
-import { WMTLogo } from '../components/';
+import { Logo } from '../components/';
 import { HelpButton, HelpModal } from '../components/';
 import { RefreshCw, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { candidateAuthService } from '../services/candidateAuthService';
@@ -157,7 +157,7 @@ const CandidateEmailVerification: React.FC = () => {
           
           {/* Header */}
           <div className="flex items-center justify-between w-full">
-            <WMTLogo size="medium" />
+            <Logo size="medium" />
             <HelpButton onClick={() => setIsHelpModalOpen(true)} />
           </div>
 
@@ -305,3 +305,4 @@ const CandidateEmailVerification: React.FC = () => {
 };
 
 export default CandidateEmailVerification;
+

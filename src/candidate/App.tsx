@@ -105,12 +105,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--interview-bg)' }}>
-      {/* Debug Info - показываем только в development режиме */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="debug-stage">
-          App Stage: {currentStage}
-        </div>
-      )}
       {renderCurrentStage()}
     </div>
   );

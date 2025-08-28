@@ -6,7 +6,7 @@ import { Progress } from './ui/progress';
 import { AIAvatarWithWaves } from './AIAvatarWithWaves';
 import { TypewriterText } from './TypewriterText';
 import { VoiceRecorder } from './VoiceRecorder';
-import { WMTLogo } from './';
+import { Logo } from './';
 import { HelpButton, HelpModal } from './';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -180,7 +180,7 @@ export function InterviewChat() {
             
             {/* Header */}
             <div className="flex items-center justify-between w-full">
-              <WMTLogo size="medium" />
+              <Logo size="medium" />
               <HelpButton onClick={() => setIsHelpModalOpen(true)} />
             </div>
 
@@ -367,7 +367,7 @@ export function InterviewChat() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <WMTLogo size="medium" />
+          <Logo size="medium" />
           <HelpButton onClick={() => setIsHelpModalOpen(true)} />
         </motion.div>
 

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { WMTLogo } from '../components/';
+import { Logo } from '../components/';
 import { HelpButton, HelpModal } from '../components/';
 import { Loader2 } from 'lucide-react';
 import { candidateAuthService, CandidateAuthData } from '../services/candidateAuthService';
@@ -231,7 +231,7 @@ const CandidateLogin: React.FC = () => {
           
           {/* Header */}
           <div className="flex items-center justify-between w-full">
-            <WMTLogo size="medium" />
+            <Logo size="medium" />
             <HelpButton onClick={() => setIsHelpModalOpen(true)} />
           </div>
 

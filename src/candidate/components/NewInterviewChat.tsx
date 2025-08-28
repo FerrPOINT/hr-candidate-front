@@ -3,7 +3,7 @@ import { AuthForm } from './AuthForm';
 import { EmailVerification } from './EmailVerification';
 import { QuestionHeader } from './QuestionHeader';
 import { SymmetricAudioWaves } from './SymmetricAudioWaves';
-import { WMTLogo, HelpButton, HelpModal, Button } from './';
+import { Logo, HelpButton, HelpModal, Button } from './';
 import { InterviewChatMessage } from './InterviewChatMessage';
 import { MicrophoneTestNew } from './MicrophoneTestNew';
 import { InstructionsModal } from './InstructionsModal';
@@ -449,7 +449,7 @@ export function NewInterviewChat() {
           
           {/* Header */}
           <div className="flex items-center justify-between w-full">
-            <WMTLogo size="medium" />
+            <Logo size="medium" />
             <HelpButton onClick={() => setIsHelpModalOpen(true)} />
           </div>
 

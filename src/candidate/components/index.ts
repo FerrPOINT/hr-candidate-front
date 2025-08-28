@@ -1,5 +1,5 @@
 // Branding components
-export { WMTLogo } from './branding/WMTLogo';
+export { Logo } from './ui/Logo';
 
 // Common components
 export { HelpButton } from './common/HelpButton';
@@ -7,7 +7,6 @@ export { HelpModal } from './common/HelpModal';
 
 // UI components
 export { Button, buttonVariants } from './ui/button';
-export { SynergyLogo } from './ui/SynergyLogo';
 export { cn } from './ui/utils';
 
 // Figma components

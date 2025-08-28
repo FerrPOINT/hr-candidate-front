@@ -1,5 +1,5 @@
 import { Button } from '../';
-import { WMTLogo } from '../';
+import { Logo } from '../';
 import { HelpButton, HelpModal } from '../';
 import { JobPosition } from './types';
 import { Clock, Mic, MessageSquare } from 'lucide-react';
@@ -18,15 +18,7 @@ export function RulesScreen({
   onToggleHelpModal 
 }: RulesScreenProps) {
   return (
-    <div className="bg-[#e9eae2] min-h-screen w-full">
-      <div className="w-full h-full flex flex-col">
-        <div className="flex flex-col gap-4 p-6 w-full h-full">
-          
-          {/* Header */}
-          <div className="flex items-center justify-between w-full">
-            <WMTLogo size="medium" />
-            <HelpButton onClick={() => onToggleHelpModal(true)} />
-          </div>
+    <>
 
           {/* Main Content */}
           <div className="flex-1 flex items-center justify-center px-4 mt-8">
@@ -121,14 +113,12 @@ export function RulesScreen({
                 </div>
               </div>
             </div>
-          </div>
-        </div>
       </div>
 
       <HelpModal 
         isOpen={isHelpModalOpen} 
         onClose={() => onToggleHelpModal(false)} 
       />
-    </div>
+    </>
   );
 }

@@ -120,7 +120,7 @@ class CandidateApiService {
       
       // Если есть ответ и не требуется верификация, значит собеседование существует
       const exists = response.data && !response.data.verificationRequired;
-      const interviewId = response.data?.candidate?.id;
+      const interviewId = response.data?.interview?.id;
       
       console.log('Interview check result:', { exists, interviewId });
       return { exists, interviewId };

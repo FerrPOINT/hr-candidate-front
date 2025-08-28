@@ -2,12 +2,12 @@ import { create } from 'zustand';
 import { CandidateLoginRequest } from '../api/models';
 import { apiService } from '../services/apiService';
 import { jwtDecode } from 'jwt-decode';
-import type { Candidate } from '../api/models';
+import type { Interview } from '../api/models';
 
 export type UserRole = 'CANDIDATE' | null;
 export type AuthZone = 'crm' | 'candidate';
 
-type AuthUser = Candidate | null;
+type AuthUser = Interview | null;
 
 interface AuthState {
   token: string | null;
@@ -133,7 +133,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Для тестирования - всегда получаем успешный ответ от API
     const res = await apiService.getApiClient().candidates.loginCandidate(data);
     const candidateResp = res.data as any;
-    const candidate = candidateResp.candidate as Candidate | undefined;
+    const candidate = candidateResp.interview as Interview | undefined;
     // На этом шаге токена нет — он придёт после верификации email
     if (candidate) {
       saveAuthData('', candidate, 'CANDIDATE', rememberMe, zone);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/';
-import { WMTLogo } from '../components/';
+import { Logo } from '../components/';
 import { CheckCircle } from 'lucide-react';
 
 const CandidateComplete: React.FC = () => {
@@ -18,7 +18,7 @@ const CandidateComplete: React.FC = () => {
           
           {/* Header */}
           <div className="flex items-center justify-between w-full">
-            <WMTLogo size="medium" />
+            <Logo size="medium" />
           </div>
 
           {/* Main Content */}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from './';
-import { HelpModal, HelpButton, WMTLogo } from './';
+import { HelpModal, HelpButton, Logo } from './';
 import { InstructionsModal } from './InstructionsModal';
 import { AIAvatarWithWaves } from './AIAvatarWithWaves';
 import { Loader2, AlertCircle } from 'lucide-react';
@@ -1075,7 +1075,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
           
           {/* Header */}
           <div className="flex items-center justify-between w-full h-16">
-            <WMTLogo size="medium" />
+            <Logo size="medium" />
             <HelpButton onClick={() => setIsHelpModalOpen(true)} />
           </div>
 
