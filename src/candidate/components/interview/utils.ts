@@ -34,7 +34,7 @@ export const createQuestionCard = (questionIndex: number, questions: ProcessQues
   return {
     id: `question-card-${questionIndex}`,
     questionIndex,
-    text: questions[questionIndex].text,
+    text: questions[questionIndex]?.text || `Вопрос ${questionIndex + 1}`,
     status: 'active',
     timeRemaining: 150,
     isNew: true

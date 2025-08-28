@@ -7,6 +7,7 @@ interface InstructionsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onStartInterview: () => void;
+  questionsCount?: number;
 }
 
 const steps = [
@@ -39,7 +40,7 @@ const steps = [
   }
 ];
 
-export function InstructionsModal({ isOpen, onClose, onStartInterview }: InstructionsModalProps) {
+export function InstructionsModal({ isOpen, onClose, onStartInterview, questionsCount = 3 }: InstructionsModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
 
   // Reset to first step when modal opens
@@ -143,7 +144,7 @@ export function InstructionsModal({ isOpen, onClose, onStartInterview }: Instruc
                       <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
                       <div className="flex items-center gap-2">
                         <MessageSquare className="w-4 h-4" />
-                        <span>3 вопроса</span>
+                        <span>{questionsCount} вопроса</span>
                       </div>
                     </div>
                   </div>

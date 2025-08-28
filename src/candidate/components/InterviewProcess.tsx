@@ -1213,6 +1213,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
         isOpen={isInstructionsModalOpen}
         onClose={() => setIsInstructionsModalOpen(false)}
         onStartInterview={handleStartInterview}
+        questionsCount={totalQuestions || 3}
       />
 
       {/* Модальное окно ошибки */}
