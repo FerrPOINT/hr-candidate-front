@@ -56,6 +56,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState<number | null>(null);
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null);
   const [initialData, setInitialData] = useState<any | null>(null);
+  const [answerTimeSec, setAnswerTimeSec] = useState<number>(150);
   
   // Состояние для ошибок
   const [error, setError] = useState<string | null>(null);
@@ -110,21 +111,10 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    // Несколько попыток скролла для надежности
-    const scroll = () => {
-      container.scrollTop = container.scrollHeight;
-    };
-
-    // Немедленная попытка
+    const scroll = () => { container.scrollTop = container.scrollHeight; };
     scroll();
-    
-    // Попытка через requestAnimationFrame
     requestAnimationFrame(scroll);
-    
-    // Попытка через setTimeout
     setTimeout(scroll, 50);
-    
-    // Финальная попытка через больший timeout
     setTimeout(scroll, 200);
   }, []);
 
@@ -149,11 +139,15 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
         negativeResponsesRef.current = (resp.data as any)?.test?.testNegativeResponses || [];
         completionQueueRef.current = (((resp.data as any)?.completion?.messages) || []).map((m: any, idx: number) => ({ id: `completion-${idx}`, text: m?.text || '', audioUrl: m?.audioUrl }));
         additionalQuestionsRef.current = ((resp.data as any)?.additionalQuestions || []) as any[];
+        
+        // answerTime из interview секции (секунды) с фолбэком 150
+        const answerTime = Number(((resp.data as any)?.interview?.answerTime)) || 150;
+        setAnswerTimeSec(answerTime);
+        setTimeRemaining(answerTime);
 
         const playIndex = async (index: number) => {
           if (isCancelled) return;
           if (index >= welcomeQueueRef.current.length) {
-            // After all messages, show microphone card
             const microphoneCard = { 
               id: 'microphone-card', 
               content: 'microphone-card', 
@@ -164,7 +158,6 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
             setMessages(prev => [...prev, microphoneCard]);
             setShowMicrophoneCard(true);
             setIsAISpeaking(false);
-            // Воспроизводим тестовое сообщение через 1 секунду после показа карточки микротеста
             const t = testMessageRef.current;
             if (t?.text || t?.audioUrl) {
               setTimeout(async () => {
@@ -191,7 +184,6 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
                 }
               }, 1000);
             }
-            // Scroll updates
             setTimeout(() => scrollToBottom(), 10);
             setTimeout(() => scrollToBottom(), 100);
             setTimeout(() => scrollToBottom(), 300);
@@ -199,38 +191,25 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
           }
 
           const item = welcomeQueueRef.current[index];
-          setCurrentMessageIndex(index);
-          // Show message bubble
           setMessages(prev => [...prev, { id: item.id, content: item.text, isVisible: true, isNew: true } as any]);
           setTimeout(() => setMessages(prev => prev.map(m => (m.id === item.id ? { ...m, isNew: false } : m))), 500);
           scrollToBottom();
-
-          // Play audio if available
           if (item.audioUrl) {
-            const fullUrl = getFullAudioUrl(item.audioUrl);
-            logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Welcome');
             try {
-              if (audioRef.current) {
-                audioRef.current.pause();
-              }
+              const fullUrl = getFullAudioUrl(item.audioUrl);
+              logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Welcome');
+              if (audioRef.current) audioRef.current.pause();
               const audio = new Audio(fullUrl);
               audioRef.current = audio;
               setIsAISpeaking(true);
-              audio.onended = () => {
-                setIsAISpeaking(false);
-                playIndex(index + 1);
-              };
-              audio.onerror = () => {
-                setIsAISpeaking(false);
-                playIndex(index + 1);
-              };
+              audio.onended = () => { setIsAISpeaking(false); playIndex(index + 1); };
+              audio.onerror = () => { setIsAISpeaking(false); playIndex(index + 1); };
               await audio.play();
-            } catch (e) {
+            } catch {
               setIsAISpeaking(false);
               playIndex(index + 1);
             }
           } else {
-            // No audio — proceed immediately
             setIsAISpeaking(false);
             playIndex(index + 1);
           }
@@ -238,25 +217,14 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
 
         playIndex(0);
       } catch (e: any) {
-        // При ошибке показываем сообщение об ошибке и блокируем интервью
         const errorMessage = e?.response?.data?.message || e?.message || 'Ошибка загрузки данных интервью';
         showError(errorMessage);
       }
     };
 
     loadAndPlayWelcome();
-    return () => {
-      isCancelled = true;
-      if (messageTimerRef.current) {
-        clearTimeout(messageTimerRef.current);
-      }
-      if (audioRef.current) {
-        audioRef.current.onended = null;
-        audioRef.current.onerror = null;
-        audioRef.current.pause();
-      }
-    };
-  }, [scrollToBottom, showError]);
+    return () => { isCancelled = true; };
+  }, [interviewId, scrollToBottom, showError]);
 
   // Простой автоскролл при изменении контента
   useEffect(() => {
@@ -269,7 +237,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
 
   const addQuestionCard = useCallback((questionIndex: number, textOverride?: string) => {
     console.log(`➕ Adding question card ${questionIndex + 1}`);
-    const base = createQuestionCard(questionIndex, []);
+    const base = createQuestionCard(questionIndex, [], answerTimeSec);
     const newQuestionCard = { ...base, text: textOverride ?? base.text } as QuestionCard;
     setQuestionCards(prev => {
       const id = `question-card-${Math.max(0, questionIndex)}`;
@@ -304,7 +272,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
         msg.id === `question-card-${questionIndex}` ? { ...msg, isNew: false } : msg
       ));
     }, 500);
-  }, []);
+  }, [answerTimeSec, scrollToBottom]);
 
   const completeQuestion = useCallback((questionIndex: number) => {
     console.log(`✅ Completing question ${questionIndex + 1}`);
@@ -439,7 +407,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
     console.log('🚀 Starting interview');
     setIsInstructionsModalOpen(false);
     setStage('question');
-    setTimeRemaining(150);
+    setTimeRemaining(answerTimeSec);
     setCurrentQuestionIndex(0);
     setIsAISpeaking(true);
     setTimerStarted(false); // Запускаем таймер после озвучки вопроса
@@ -548,7 +516,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
     });
     completeQuestion(currentQuestionIndex);
     setTimerStarted(false);
-    setTimeRemaining(150);
+    setTimeRemaining(answerTimeSec);
     try {
       if (currentQuestionIdRef.current != null) {
         console.log('📤 submitAnswer(skip=true) → sending', {
@@ -626,7 +594,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
 
       setIsAISpeaking(false);
       setTimerStarted(false);
-      setTimeRemaining(150);
+      setTimeRemaining(answerTimeSec);
       if (data.audioUrl) {
         try {
           const fullUrl = getFullAudioUrl(data.audioUrl);
@@ -796,7 +764,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
         scrollToBottom();
         setStage('question');
         setTimerStarted(false);
-        setTimeRemaining(150);
+        setTimeRemaining(answerTimeSec);
         // Если у следующего вопроса есть аудио — воспроизводим его и запускаем таймер по окончании, иначе сразу стартуем таймер
         if (data.audioUrl) {
           try {
@@ -1215,6 +1183,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
         onClose={() => setIsInstructionsModalOpen(false)}
         onStartInterview={handleStartInterview}
         questionsCount={totalQuestions || 3}
+        answerTimeSec={answerTimeSec}
       />
 
       {/* Модальное окно ошибки */}

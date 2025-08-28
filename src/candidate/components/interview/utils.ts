@@ -30,13 +30,13 @@ export const resetMessageCounter = () => {
   messageCounter = 0;
 };
 
-export const createQuestionCard = (questionIndex: number, questions: ProcessQuestion[]): QuestionCard => {
+export const createQuestionCard = (questionIndex: number, questions: ProcessQuestion[], timeLimitSec: number = 150): QuestionCard => {
   return {
     id: `question-card-${questionIndex}`,
     questionIndex,
     text: questions[questionIndex]?.text || `Вопрос ${questionIndex + 1}`,
     status: 'active',
-    timeRemaining: 150,
+    timeRemaining: timeLimitSec,
     isNew: true
   };
 };

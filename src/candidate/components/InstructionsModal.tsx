@@ -8,6 +8,7 @@ interface InstructionsModalProps {
   onClose: () => void;
   onStartInterview: () => void;
   questionsCount?: number;
+  answerTimeSec?: number;
 }
 
 const steps = [
@@ -40,7 +41,7 @@ const steps = [
   }
 ];
 
-export function InstructionsModal({ isOpen, onClose, onStartInterview, questionsCount = 3 }: InstructionsModalProps) {
+export function InstructionsModal({ isOpen, onClose, onStartInterview, questionsCount = 3, answerTimeSec = 150 }: InstructionsModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
 
   // Reset to first step when modal opens
@@ -67,6 +68,12 @@ export function InstructionsModal({ isOpen, onClose, onStartInterview, questions
   };
 
   const currentStepData = steps[currentStep];
+
+  const formatMmSs = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, '0')} мин на ответ`;
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -139,7 +146,7 @@ export function InstructionsModal({ isOpen, onClose, onStartInterview, questions
                     <div className="flex items-center justify-center gap-8 text-xs text-gray-600">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        <span>2:30 мин на ответ</span>
+                        <span>{formatMmSs(answerTimeSec)}</span>
                       </div>
                       <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
                       <div className="flex items-center gap-2">
