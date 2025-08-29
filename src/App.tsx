@@ -20,8 +20,8 @@ const SessionInitializer: React.FC<{ zone: 'crm' | 'candidate' }> = ({ zone }) =
         console.error('Failed to restore CRM session:', error);
       });
     }
-    // Для candidate-зоны инициализируем только если путь начинается с /interview, /session, /candidate
-    if (zone === 'candidate' && (/^\/(interview|session|candidate)/.test(location.pathname))) {
+    // Для candidate-зоны инициализируем только если путь начинается с /candidate/interview, /session, /candidate
+    if (zone === 'candidate' && (/^\/(candidate\/interview|session|candidate)/.test(location.pathname))) {
       console.log('🔍 SessionInitializer - Initializing candidate session');
       restoreSession().catch(error => {
         console.error('Failed to restore candidate session:', error);
@@ -42,7 +42,7 @@ function App() {
       <SessionInitializer zone="candidate" />
       <Routes>
         {/* Single Page для кандидата - только по конкретному ID интервью */}
-        <Route path="/interview/:interviewId" element={<CandidateApp />} />
+        <Route path="/candidate/interview/:interviewId" element={<CandidateApp />} />
         
         {/* Fallback - 404 без редиректов */}
         <Route path="*" element={<div>404 - Страница не найдена</div>} />

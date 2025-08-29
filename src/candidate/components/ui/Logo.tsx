@@ -15,7 +15,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'large', className = "" }) =>
   return (
     <div className={`${sizeClasses[size]} w-auto object-contain ${className}`}>
       <img 
-        src="/images/logo.webp" 
+        src={`${process.env.PUBLIC_URL}/images/logo.webp`}
         alt="Company Logo" 
         className="w-full h-full object-contain"
       />
