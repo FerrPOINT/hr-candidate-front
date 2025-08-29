@@ -4,6 +4,7 @@ export { Logo } from './ui/Logo';
 // Common components
 export { HelpButton } from './common/HelpButton';
 export { HelpModal } from './common/HelpModal';
+export { Header } from './common/Header';
 
 // UI components
 export { Button, buttonVariants } from './ui/button';

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from './';
-import { HelpModal, HelpButton, Logo } from './';
+import { HelpModal, Header } from './';
 import { InstructionsModal } from './InstructionsModal';
 import { AIAvatarWithWaves } from './AIAvatarWithWaves';
 import { Loader2, AlertCircle } from 'lucide-react';
@@ -1042,11 +1042,8 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
       <div className="w-full h-full flex flex-col">
         <div className="flex flex-col gap-4 p-6 w-full h-full">
           
-          {/* Header */}
-          <div className="flex items-center justify-between w-full h-16">
-            <Logo size="medium" />
-            <HelpButton onClick={() => setIsHelpModalOpen(true)} />
-          </div>
+                  {/* Header */}
+        <Header onHelpClick={() => setIsHelpModalOpen(true)} />
 
           {/* Main Content Area - с правильной высотой и z-index */}
           <div 

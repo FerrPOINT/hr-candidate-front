@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from './';
 import { Input } from './ui/input';
-import { Logo } from './';
-import { HelpButton, HelpModal } from './';
+import { Header, HelpModal } from './';
 import { RefreshCw, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { candidateAuthService } from '../services/candidateAuthService';
 
@@ -105,10 +104,12 @@ export function EmailVerification({ email, onContinue, onGoBack, interviewId, jo
   };
 
   return (
-    <>
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <Header onHelpClick={() => setIsHelpModalOpen(true)} />
 
-          {/* Main Content - Compact version */}
-          <div className="flex-1 flex items-center justify-center px-4 mt-8">
+      {/* Main Content - Compact version */}
+      <div className="flex-1 flex items-start justify-center px-4 pt-20">
             <div className="bg-[#f5f6f1] rounded-[44px] w-full max-w-2xl">
               <div className="w-full h-full">
                 <div className="flex flex-col gap-6 p-6 w-full">
@@ -255,6 +256,6 @@ export function EmailVerification({ email, onContinue, onGoBack, interviewId, jo
         isOpen={isHelpModalOpen} 
         onClose={() => setIsHelpModalOpen(false)} 
       />
-    </>
+    </div>
   );
 }
