@@ -81,7 +81,14 @@ class CandidateApiService {
         data: error.response?.data,
         config: error.config
       });
-      throw new Error('Ошибка авторизации кандидата');
+      
+      // Используем сообщение из ответа сервера, если оно есть
+      const serverMessage = error.response?.data?.message;
+      if (serverMessage) {
+        throw new Error(serverMessage);
+      } else {
+        throw new Error('Ошибка авторизации кандидата');
+      }
     }
   }
 
@@ -99,7 +106,14 @@ class CandidateApiService {
       return response.data;
     } catch (error: any) {
       console.error('Error verifying candidate email:', error);
-      throw new Error('Ошибка верификации email');
+      
+      // Используем сообщение из ответа сервера, если оно есть
+      const serverMessage = error.response?.data?.message;
+      if (serverMessage) {
+        throw new Error(serverMessage);
+      } else {
+        throw new Error('Ошибка верификации email');
+      }
     }
   }
 

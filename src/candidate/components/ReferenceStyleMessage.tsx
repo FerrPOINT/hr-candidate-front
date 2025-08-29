@@ -193,7 +193,7 @@ export function MicrophoneTestVisual() {
         <div
           className="text-center uppercase"
           style={{ 
-            fontFamily: 'Inter Display', 
+            fontFamily: 'Inter', 
             fontWeight: 'var(--font-weight-medium)',
             fontSize: '1.25rem',
             lineHeight: '1.2'
@@ -329,7 +329,7 @@ export function RecordingControls({
             <span 
               className="text-[#e16349]"
               style={{ 
-                fontFamily: 'Inter Display', 
+                fontFamily: 'Inter', 
                 fontWeight: 'var(--font-weight-medium)',
                 fontSize: 'var(--text-h4)',
                 lineHeight: '1.2'
