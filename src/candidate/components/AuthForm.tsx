@@ -181,6 +181,8 @@ export function AuthForm({ onContinue, positionId }: AuthFormProps) {
                                   value={firstName}
                                   onChange={(e) => setFirstName(e.target.value)}
                                   disabled={isLoading}
+                                  autoComplete="given-name"
+                                  name="firstName"
                                   className={`w-full border-[#e2e4e9] bg-transparent h-14 px-6 rounded-[20px] text-base ${
                                     errors.firstName ? 'border-red-500' : ''
                                   } ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
@@ -202,6 +204,8 @@ export function AuthForm({ onContinue, positionId }: AuthFormProps) {
                                   value={lastName}
                                   onChange={(e) => setLastName(e.target.value)}
                                   disabled={isLoading}
+                                  autoComplete="family-name"
+                                  name="lastName"
                                   className={`w-full border-[#e2e4e9] bg-transparent h-14 px-6 rounded-[20px] text-base ${
                                     errors.lastName ? 'border-red-500' : ''
                                   } ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
@@ -223,6 +227,8 @@ export function AuthForm({ onContinue, positionId }: AuthFormProps) {
                                   value={email}
                                   onChange={(e) => setEmail(e.target.value)}
                                   disabled={isLoading}
+                                  autoComplete="email"
+                                  name="email"
                                   className={`w-full border-[#e2e4e9] bg-transparent h-14 px-6 rounded-[20px] text-base ${
                                     errors.email ? 'border-red-500' : ''
                                   } ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
