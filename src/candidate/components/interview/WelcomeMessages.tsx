@@ -5,6 +5,7 @@ import { Play, Pause, Volume2, AlertCircle } from 'lucide-react';
 import { candidateAuthService } from '../../services/candidateAuthService';
 import logger from '../../../utils/logger';
 import { getFullAudioUrl, logAudioUrl } from '../../../utils/audioUtils';
+import { audioService } from '../../services/audioService';
 
 interface WelcomeMessage {
   text: string;
@@ -49,14 +50,11 @@ const WelcomeMessages: React.FC<WelcomeMessagesProps> = ({ interviewId, onContin
       // Останавливаем предыдущий аудио
       if (currentAudio) {
         logger.debug('⏹️ Останавливаем предыдущий аудио', { component: 'WelcomeMessages' });
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
       }
+      audioService.stopAudio();
 
-      const audio = new Audio(fullAudioUrl);
-      
       // Обработчик окончания аудио
-      audio.addEventListener('ended', () => {
+      audioService.onEnded(() => {
         logger.info('🔚 Аудио завершено, переходим к следующему', { 
           component: 'WelcomeMessages',
           totalMessages: messagesData!.messages.length
@@ -97,7 +95,9 @@ const WelcomeMessages: React.FC<WelcomeMessagesProps> = ({ interviewId, onContin
         });
       });
 
-      audio.addEventListener('error', () => {
+      // Ошибка на элементе — fallback обработка (ошибки старта ловим в catch)
+      // Оставлено для совместимости, если браузер триггерит error после старта
+      const onError = () => {
         logger.error('❌ Ошибка воспроизведения аудио', undefined, { 
           component: 'WelcomeMessages', 
           originalAudioUrl: audioUrl,
@@ -131,13 +131,13 @@ const WelcomeMessages: React.FC<WelcomeMessagesProps> = ({ interviewId, onContin
           }
           return prevHasPlayed;
         });
-      });
+      };
 
-      setCurrentAudio(audio);
+      setCurrentAudio(null);
       setIsPlaying(true);
       
       logger.debug('▶️ Запускаем воспроизведение аудио', { component: 'WelcomeMessages' });
-      await audio.play();
+      await audioService.playAudioFromUrl(fullAudioUrl, { volume: 0.8 });
       
       logger.info('✅ Аудио успешно запущено', { component: 'WelcomeMessages' });
     } catch (err: any) {
@@ -284,12 +284,9 @@ const WelcomeMessages: React.FC<WelcomeMessagesProps> = ({ interviewId, onContin
 
 
   const stopAudio = () => {
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      setIsPlaying(false);
-      setCurrentAudio(null);
-    }
+    audioService.stopAudio();
+    setIsPlaying(false);
+    setCurrentAudio(null);
   };
 
   // Функция для принудительного перехода к следующему сообщению

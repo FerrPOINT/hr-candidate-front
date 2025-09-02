@@ -11,6 +11,7 @@ import { ProcessStage, AIMessage, QuestionCard } from './interview/types';
 
 import { apiClient } from '../../api/apiClient';
 import { getFullAudioUrl, logAudioUrl } from '../../utils/audioUtils';
+import { audioService } from '../services/audioService';
 import { createQuestionCard, markQuestionAsCompleted, updateQuestionTime } from './interview/utils';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 
@@ -171,13 +172,10 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
                   try {
                     const fullUrl = getFullAudioUrl(t.audioUrl);
                     logAudioUrl(t.audioUrl, fullUrl, 'InterviewProcess:TestMessage');
-                    if (audioRef.current) audioRef.current.pause();
-                    const audio = new Audio(fullUrl);
-                    audioRef.current = audio;
+                    audioService.stopAudio();
                     setIsAISpeaking(true);
-                    audio.onended = () => { setIsAISpeaking(false); };
-                    audio.onerror = () => { setIsAISpeaking(false); };
-                    await audio.play();
+                    void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+                    audioService.onEnded(() => { setIsAISpeaking(false); });
                   } catch {
                     setIsAISpeaking(false);
                   }
@@ -198,13 +196,10 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
             try {
               const fullUrl = getFullAudioUrl(item.audioUrl);
               logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Welcome');
-              if (audioRef.current) audioRef.current.pause();
-              const audio = new Audio(fullUrl);
-              audioRef.current = audio;
+              audioService.stopAudio();
               setIsAISpeaking(true);
-              audio.onended = () => { setIsAISpeaking(false); playIndex(index + 1); };
-              audio.onerror = () => { setIsAISpeaking(false); playIndex(index + 1); };
-              await audio.play();
+              void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+              audioService.onEnded(() => { setIsAISpeaking(false); playIndex(index + 1); });
             } catch {
               setIsAISpeaking(false);
               playIndex(index + 1);
@@ -440,13 +435,10 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
               try {
                 const fullUrl = getFullAudioUrl(item.audioUrl);
                 logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Completion');
-                if (audioRef.current) audioRef.current.pause();
-                const audio = new Audio(fullUrl);
-                audioRef.current = audio;
+                audioService.stopAudio();
                 setIsAISpeaking(true);
-                audio.onended = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
-                audio.onerror = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
-                await audio.play();
+                void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+                audioService.onEnded(() => { setIsAISpeaking(false); playCompletion(idx + 1); });
               } catch {
                 setIsAISpeaking(false);
                 playCompletion(idx + 1);
@@ -478,13 +470,10 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
           try {
             const fullUrl = getFullAudioUrl(data.audioUrl);
             logAudioUrl(data.audioUrl, fullUrl, 'InterviewProcess:Question');
-            if (audioRef.current) audioRef.current.pause();
-            const audio = new Audio(fullUrl);
-            audioRef.current = audio;
+            audioService.stopAudio();
             setIsAISpeaking(true);
-            audio.onended = () => { setIsAISpeaking(false); setTimerStarted(true); };
-            audio.onerror = () => { setIsAISpeaking(false); setTimerStarted(true); };
-            await audio.play();
+            void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+            audioService.onEnded(() => { setIsAISpeaking(false); setTimerStarted(true); });
           } catch { setIsAISpeaking(false); setTimerStarted(true); }
         } else {
           setIsAISpeaking(false);
@@ -557,13 +546,10 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
             try {
               const fullUrl = getFullAudioUrl(item.audioUrl);
               logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Completion');
-              if (audioRef.current) audioRef.current.pause();
-              const audio = new Audio(fullUrl);
-              audioRef.current = audio;
+              audioService.stopAudio();
               setIsAISpeaking(true);
-              audio.onended = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
-              audio.onerror = () => { setIsAISpeaking(false); playCompletion(idx + 1); };
-              await audio.play();
+              void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+              audioService.onEnded(() => { setIsAISpeaking(false); playCompletion(idx + 1); });
             } catch {
               setIsAISpeaking(false);
               playCompletion(idx + 1);
@@ -599,13 +585,10 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
         try {
           const fullUrl = getFullAudioUrl(data.audioUrl);
           logAudioUrl(data.audioUrl, fullUrl, 'InterviewProcess:Question');
-          if (audioRef.current) audioRef.current.pause();
-          const audio = new Audio(fullUrl);
-          audioRef.current = audio;
+          audioService.stopAudio();
           setIsAISpeaking(true);
-          audio.onended = () => { setIsAISpeaking(false); setTimerStarted(true); };
-          audio.onerror = () => { setIsAISpeaking(false); setTimerStarted(true); };
-          await audio.play();
+          void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+          audioService.onEnded(() => { setIsAISpeaking(false); setTimerStarted(true); });
         } catch { setIsAISpeaking(false); setTimerStarted(true); }
       } else { setTimerStarted(true); }
     } catch (e: any) {
@@ -655,7 +638,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
         });
         return apiClient.candidates.submitAnswer(interviewId, currentQuestionIdRef.current, false, file);
       })
-      .then((resp: any) => {
+      .then(async (resp: any) => {
         console.log('✅ submitAnswer(skip=false) → success', resp?.data);
         setIsSavingAnswer(false);
         setIsTranscribing(false);
@@ -772,11 +755,10 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
             logAudioUrl(data.audioUrl, fullUrl, 'InterviewProcess:Question');
             if (audioRef.current) audioRef.current.pause();
             const audio = new Audio(fullUrl);
-            audioRef.current = audio;
             setIsAISpeaking(true);
-            audio.onended = () => { setIsAISpeaking(false); setTimerStarted(true); };
-            audio.onerror = () => { setIsAISpeaking(false); setTimerStarted(true); };
-            audio.play().catch(() => { setIsAISpeaking(false); setTimerStarted(true); });
+            audioService.stopAudio();
+            void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+            audioService.onEnded(() => { setIsAISpeaking(false); setTimerStarted(true); });
           } catch {
             setIsAISpeaking(false);
             setTimerStarted(true);
