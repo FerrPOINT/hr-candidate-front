@@ -75,6 +75,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
   const welcomeQueueRef = useRef<{ id: string; text: string; audioUrl?: string }[]>([]);
   const completionQueueRef = useRef<{ id: string; text: string; audioUrl?: string }[]>([]);
   const testMessageRef = useRef<{ text?: string; audioUrl?: string } | null>(null);
+  const testPreMessageRef = useRef<{ text?: string; audioUrl?: string } | null>(null);
   const positiveResponsesRef = useRef<{ text?: string; audioUrl?: string }[]>([]);
   const negativeResponsesRef = useRef<{ text?: string; audioUrl?: string }[]>([]);
   const additionalQuestionsRef = useRef<{ question?: string; answer?: string }[]>([]);
@@ -136,6 +137,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
         const items = ((resp.data as any)?.welcome?.messages || []).map((m: any, idx: number) => ({ id: `welcome-${idx}`, text: m.text || '', audioUrl: m.audioUrl }));
         welcomeQueueRef.current = items;
         testMessageRef.current = (resp.data as any)?.test?.testMessage || null;
+        testPreMessageRef.current = (resp.data as any)?.test?.testPreMessage || (resp.data as any)?.test?.preMessage || null;
         positiveResponsesRef.current = (resp.data as any)?.test?.testPositiveResponses || [];
         negativeResponsesRef.current = (resp.data as any)?.test?.testNegativeResponses || [];
         completionQueueRef.current = (((resp.data as any)?.completion?.messages) || []).map((m: any, idx: number) => ({ id: `completion-${idx}`, text: m?.text || '', audioUrl: m?.audioUrl }));
@@ -154,33 +156,53 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
               content: 'microphone-card', 
               isVisible: true, 
               isNew: true,
-              type: 'microphone-card'
+              type: 'microphone-card',
+              preMessage: testPreMessageRef.current || undefined
             } as any;
             setMessages(prev => [...prev, microphoneCard]);
             setShowMicrophoneCard(true);
             setIsAISpeaking(false);
+
+            // Готовим показ тестового сообщения (после pre-audio, если оно есть)
             const t = testMessageRef.current;
-            if (t?.text || t?.audioUrl) {
-              setTimeout(async () => {
-                if (t?.text) {
-                  const id = `test-msg`;
-                  setMessages(prev => [...prev, { id, content: t.text!, isVisible: true, isNew: true } as any]);
-                  setTimeout(() => setMessages(prev => prev.map(m => (m.id === id ? { ...m, isNew: false } : m))), 500);
-                  scrollToBottom();
+            const showTestMessage = () => {
+              if (!(t?.text || t?.audioUrl)) return;
+              if (t?.text) {
+                const id = `test-msg`;
+                setMessages(prev => [...prev, { id, content: t.text!, isVisible: true, isNew: true } as any]);
+                setTimeout(() => setMessages(prev => prev.map(m => (m.id === id ? { ...m, isNew: false } : m))), 500);
+                scrollToBottom();
+              }
+              if (t?.audioUrl) {
+                try {
+                  const fullUrl = getFullAudioUrl(t.audioUrl);
+                  logAudioUrl(t.audioUrl, fullUrl, 'InterviewProcess:TestMessage');
+                  audioService.stopAudio();
+                  setIsAISpeaking(true);
+                  void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+                  audioService.onEnded(() => { setIsAISpeaking(false); });
+                } catch {
+                  setIsAISpeaking(false);
                 }
-                if (t?.audioUrl) {
-                  try {
-                    const fullUrl = getFullAudioUrl(t.audioUrl);
-                    logAudioUrl(t.audioUrl, fullUrl, 'InterviewProcess:TestMessage');
-                    audioService.stopAudio();
-                    setIsAISpeaking(true);
-                    void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
-                    audioService.onEnded(() => { setIsAISpeaking(false); });
-                  } catch {
-                    setIsAISpeaking(false);
-                  }
-                }
-              }, 1000);
+              }
+            };
+
+            // Воспроизведение аудио из testPreMessage, если доступно
+            try {
+              const preAudioUrl = testPreMessageRef.current?.audioUrl;
+              if (preAudioUrl) {
+                const fullUrl = getFullAudioUrl(preAudioUrl);
+                logAudioUrl(preAudioUrl, fullUrl, 'InterviewProcess:TestPreMessage');
+                audioService.stopAudio();
+                setIsAISpeaking(true);
+                void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+                audioService.onEnded(() => { setIsAISpeaking(false); showTestMessage(); });
+              } else {
+                showTestMessage();
+              }
+            } catch {
+              setIsAISpeaking(false);
+              showTestMessage();
             }
             setTimeout(() => scrollToBottom(), 10);
             setTimeout(() => scrollToBottom(), 100);
@@ -513,8 +535,42 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
           questionId: currentQuestionIdRef.current,
           skip: true
         });
-        await apiClient.candidates.submitAnswer(interviewId, currentQuestionIdRef.current, true);
-        console.log('✅ submitAnswer(skip=true) → success');
+        const resp = await apiClient.candidates.submitAnswer(interviewId, currentQuestionIdRef.current, true);
+        console.log('✅ submitAnswer(skip=true) → success', resp?.data);
+        // Если API явно говорит, что следующего вопроса нет — завершаем интервью без запроса следующего
+        if (resp && resp.data && resp.data.nextQuestion === false) {
+          console.log('🏁 nextQuestion=false in submitAnswer(skip) response — finishing interview');
+          setTimerStarted(false);
+          const playCompletion = async (idx: number) => {
+            if (idx >= completionQueueRef.current.length) {
+              setStage('candidate-questions');
+              return;
+            }
+            const item = completionQueueRef.current[idx];
+            setMessages(prev => [...prev, { id: item.id, content: item.text, isVisible: true, isNew: true } as any]);
+            setTimeout(() => setMessages(prev => prev.map(m => (m.id === item.id ? { ...m, isNew: false } : m))), 500);
+            scrollToBottom();
+            if (item.audioUrl) {
+              try {
+                const fullUrl = getFullAudioUrl(item.audioUrl);
+                logAudioUrl(item.audioUrl, fullUrl, 'InterviewProcess:Completion');
+                audioService.stopAudio();
+                setIsAISpeaking(true);
+                void audioService.playAudioFromUrl(fullUrl, { volume: 0.8 });
+                audioService.onEnded(() => { setIsAISpeaking(false); playCompletion(idx + 1); });
+              } catch {
+                setIsAISpeaking(false);
+                playCompletion(idx + 1);
+              }
+            } else {
+              setIsAISpeaking(false);
+              playCompletion(idx + 1);
+            }
+          };
+          try { await apiClient.candidates.endInterview(interviewId); } catch {}
+          playCompletion(0);
+          return;
+        }
       } else {
         console.warn('⚠️ Cannot submit skip: currentQuestionId is null');
       }
@@ -925,11 +981,11 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
             <div key={message.id}>
               {('type' in message && message.type === 'microphone-card') ? (
                 <div className="flex justify-start">
-                  <MicrophoneTestCard />
+                  <MicrophoneTestCard text={(message as any)?.preMessage?.text} />
                 </div>
               ) : ('type' in message && message.type === 'reading-card') ? (
                 <div className="flex justify-start">
-                  <ReadingTestCard />
+                  <ReadingTestCard text={(testMessageRef.current?.text) || undefined} />
                 </div>
               ) : ('type' in message && message.type === 'question-card' && 'questionCard' in message) ? (
                 <div key={(message.questionCard as any).id}>
@@ -945,7 +1001,7 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
               ) : (
                 <div className={`flex ${('isUser' in message && message.isUser) ? 'justify-end' : 'justify-start'}`}>
                   {message.id === 'test-msg' ? (
-                    <ReadingTestCard />
+                    <ReadingTestCard text={message.content as any} />
                   ) : (
                     <MessageBubble 
                       content={message.content} 

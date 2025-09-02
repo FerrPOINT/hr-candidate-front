@@ -459,6 +459,14 @@ components:
         - REJECTED
         - HIRED
 
+    InterviewResultEnum:
+      type: string
+      enum:
+        - SUCCESSFUL
+        - UNSUCCESSFUL
+        - ERROR
+      description: Результат собеседования
+
     Interview:
       allOf:
         - $ref: '#/components/schemas/BaseEntity'
@@ -815,6 +823,16 @@ components:
         test:
           type: object
           properties:
+            testPreMessage:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Текст предварительного сообщения
+                audioUrl:
+                  type: string
+                  description: URL аудиофайла с предварительным сообщением
+              description: Сообщение-инструкция перед тестовым сообщением
             testMessage:
               type: object
               properties:
@@ -850,6 +868,8 @@ components:
                     description: URL аудиофайла с негативным ответом
               description: Негативные ответы на тест
           description: Тестовые данные для проверки микрофона
+          required:
+            - testPreMessage
         completion:
           $ref: '#/components/schemas/CompletionResponse'
           description: Завершающие сообщения

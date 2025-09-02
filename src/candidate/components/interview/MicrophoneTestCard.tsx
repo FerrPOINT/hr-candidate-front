@@ -1,6 +1,6 @@
 import svgPathsCard from "../../imports/svg-36xq5onfvf";
 
-export function MicrophoneTestCard() {
+export function MicrophoneTestCard({ text }: { text?: string }) {
   return (
     <div className="bg-[#ffffff] relative rounded-br-[24px] rounded-tl-[24px] rounded-tr-[24px] max-w-[421px] w-full">
       <div
@@ -15,11 +15,7 @@ export function MicrophoneTestCard() {
               <p className="block leading-[24px]">Проверим микрофон</p>
             </div>
             <div className="css-5cyu6a flex flex-col justify-center relative shrink-0 text-[#000000] text-[14px] tracking-[-0.084px] w-full">
-              <p className="block leading-[20px]">
-                Нажми кнопку "Тест Микрофона", чтобы проверить микрофон. Обрати
-                внимание, когда интервью начнется уже нельзя будет перезагружать
-                страницу.
-              </p>
+              <p className="block leading-[20px]">{text || ''}</p>
             </div>
           </div>
           

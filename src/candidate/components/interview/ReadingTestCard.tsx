@@ -1,6 +1,5 @@
 
-
-export function ReadingTestCard() {
+export function ReadingTestCard({ text }: { text?: string }) {
   return (
     <div className="bg-[#ffffff] relative rounded-br-[24px] rounded-tl-[24px] rounded-tr-[24px] max-w-[421px] w-full">
       <div
@@ -14,7 +13,7 @@ export function ReadingTestCard() {
               <p className="block leading-[24px]">Прочитай предложение</p>
             </div>
             <div className="css-5cyu6a flex flex-col justify-center relative shrink-0 text-[#000000] text-[14px] tracking-[-0.084px] w-full">
-              <p className="block leading-[20px]">"Хотите понять других – пристальнее смотрите в самого себя."</p>
+              <p className="block leading-[20px]">{text || '""'}</p>
             </div>
           </div>
         </div>

@@ -82,4 +82,4 @@ export const processQuestions: ProcessQuestion[] = [
   }
 ];
 
-export const readingText = "Хотите понять других – пристальнее смотрите в самого себя.";
+export const readingText = "";

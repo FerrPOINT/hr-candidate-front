@@ -12,15 +12,10 @@ export interface AudioPlayerOptions {
 class AudioService {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
-  private audioContext: AudioContext | null = null;
-  private masterGain: GainNode | null = null;
-  private compressor: DynamicsCompressorNode | null = null;
-  private mediaElementSource: MediaElementAudioSourceNode | null = null;
   private audioElement: HTMLAudioElement | null = null;
   private recordingStartTime: number = 0;
   private isRecording: boolean = false;
-
-  private readonly defaultMasterVolume: number = 0.8;
+  private readonly defaultVolume: number = 0.8;
   private readonly fadeInDurationMs: number = 350;
 
   /**
@@ -30,82 +25,28 @@ class AudioService {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   }
 
-  private ensureAudioGraph(): void {
-    if (!this.audioContext) {
-      try {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      } catch {
-        this.audioContext = null;
-      }
-    }
-    if (!this.audioContext) return;
-
-    if (!this.masterGain) {
-      this.masterGain = this.audioContext.createGain();
-      this.masterGain.gain.value = this.defaultMasterVolume;
-    }
-
-    if (!this.compressor) {
-      this.compressor = this.audioContext.createDynamicsCompressor();
-      // Базовые мягкие настройки для выравнивания громкости
-      this.compressor.threshold.value = -18;
-      this.compressor.knee.value = 20;
-      this.compressor.ratio.value = 3;
-      this.compressor.attack.value = 0.003;
-      this.compressor.release.value = 0.25;
-    }
-
-    // Соединяем статику: compressor -> master -> destination (однократно)
-    try {
-      // Проверим, не подключены ли уже
-      const destination = this.audioContext.destination;
-      // Попытка двойного connect не бросает, но избежим
-      this.compressor.disconnect();
-      this.masterGain.disconnect();
-      this.compressor.connect(this.masterGain);
-      this.masterGain.connect(destination);
-    } catch {}
-  }
-
-  private connectElementToGraph(audio: HTMLAudioElement): void {
-    if (!this.audioContext) return;
-    // Очистим предыдущий источник, если был
-    try {
-      this.mediaElementSource?.disconnect();
-    } catch {}
-    this.mediaElementSource = null;
-
-    try {
-      // Для стабильной работы WebAudio (и CORS) безопасно выставить anonymous
-      try { (audio as any).crossOrigin = (audio as any).crossOrigin ?? 'anonymous'; } catch {}
-      this.mediaElementSource = this.audioContext.createMediaElementSource(audio);
-      if (this.compressor) {
-        this.mediaElementSource.connect(this.compressor);
-      } else if (this.masterGain) {
-        this.mediaElementSource.connect(this.masterGain);
-      } else {
-        this.mediaElementSource.connect(this.audioContext.destination);
-      }
-    } catch {
-      // В некоторых браузерах createMediaElementSource может бросить, оставим фолбэк на прямое воспроизведение
-      this.mediaElementSource = null;
-    }
-  }
-
-  private async fadeIn(): Promise<void> {
-    if (!this.audioContext || !this.masterGain) return;
-    const now = this.audioContext.currentTime;
-    const target = Math.max(0, Math.min(1, this.masterGain.gain.value || this.defaultMasterVolume));
-    // Начнем с нуля и поднимем к target за fadeInDurationMs
-    try {
-      this.masterGain.gain.cancelScheduledValues(now);
-      this.masterGain.gain.setValueAtTime(0.0001, now);
-      this.masterGain.gain.exponentialRampToValueAtTime(target, now + this.fadeInDurationMs / 1000);
-    } catch {
-      // Fallback линейный
-      this.masterGain.gain.setValueAtTime(0, now);
-      this.masterGain.gain.linearRampToValueAtTime(target, now + this.fadeInDurationMs / 1000);
-    }
+  private async fadeInElementVolume(targetVolume?: number, durationMs?: number): Promise<void> {
+    if (!this.audioElement) return;
+    const element = this.audioElement;
+    const target = Math.max(0, Math.min(1, targetVolume ?? this.defaultVolume));
+    const duration = Math.max(0, durationMs ?? this.fadeInDurationMs);
+    const start = performance.now();
+    element.volume = Math.min(element.volume, 0.0001);
+    return new Promise((resolve) => {
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / duration);
+        // экспоненциальная кривизна для мягкого старта
+        const eased = t === 1 ? 1 : Math.pow(2, 10 * (t - 1));
+        element.volume = Math.max(0, Math.min(target, target * eased));
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          element.volume = target;
+          resolve();
+        }
+      };
+      requestAnimationFrame(step);
+    });
   }
 
   /**
@@ -200,48 +141,19 @@ class AudioService {
     try {
       const audioUrl = URL.createObjectURL(audioBlob);
       this.audioElement = new Audio(audioUrl);
-      // Обнулим громкость элемента, мастер-громкость управляет уровнем
-      if (this.audioElement) this.audioElement.volume = 1;
+      if (this.audioElement) this.audioElement.volume = Math.max(0, Math.min(1, options.volume ?? this.defaultVolume));
       
       if (options.volume !== undefined) {
-        // При наличии AudioContext — перенастроим master gain, иначе используем громкость элемента
-        this.ensureAudioGraph();
-        if (this.masterGain) {
-          this.masterGain.gain.value = Math.max(0, Math.min(1, options.volume));
-        } else {
-          this.audioElement.volume = Math.max(0, Math.min(1, options.volume));
-        }
+        this.audioElement.volume = Math.max(0, Math.min(1, options.volume));
       }
       
       if (options.playbackRate !== undefined) {
         this.audioElement.playbackRate = options.playbackRate;
       }
 
-      // Подключим к графу и сделаем мягкий fade-in
-      this.ensureAudioGraph();
-      this.connectElementToGraph(this.audioElement);
-      // Постараемся резюмировать контекст перед проигрыванием (autoplay policy)
-      if (this.audioContext && this.audioContext.state !== 'running') {
-        try { await this.audioContext.resume(); } catch {}
-      }
       await this.audioElement.play();
-      await this.fadeIn();
     } catch (error: any) {
       console.error('Play audio error:', error);
-      // Фолбэк: отключаем WebAudio и пробуем напрямую через element.volume
-      try {
-        if (this.mediaElementSource) {
-          try { this.mediaElementSource.disconnect(); } catch {}
-          this.mediaElementSource = null;
-        }
-        if (this.audioElement) {
-          if (options.volume !== undefined) {
-            this.audioElement.volume = Math.max(0, Math.min(1, options.volume));
-          }
-          await this.audioElement.play();
-          return;
-        }
-      } catch {}
       throw new Error('Ошибка воспроизведения аудио');
     }
   }
@@ -252,60 +164,19 @@ class AudioService {
   async playAudioFromUrl(audioUrl: string, options: AudioPlayerOptions = {}): Promise<void> {
     try {
       this.audioElement = new Audio(audioUrl);
-      if (this.audioElement) this.audioElement.volume = 1;
-      // Оценим, можно ли безопасно подключать WebAudio граф (same-origin)
-      let isSameOrigin = true;
-      try {
-        const u = new URL(audioUrl, window.location.href);
-        isSameOrigin = (u.origin === window.location.origin);
-      } catch { isSameOrigin = true; }
+      if (this.audioElement) this.audioElement.volume = Math.max(0, Math.min(1, options.volume ?? this.defaultVolume));
       
       if (options.volume !== undefined) {
-        if (isSameOrigin) {
-          this.ensureAudioGraph();
-          if (this.masterGain) {
-            this.masterGain.gain.value = Math.max(0, Math.min(1, options.volume));
-          } else {
-            this.audioElement.volume = Math.max(0, Math.min(1, options.volume));
-          }
-        } else {
-          // Для cross-origin без CORS используем громкость элемента
-          this.audioElement.volume = Math.max(0, Math.min(1, options.volume));
-        }
+        this.audioElement.volume = Math.max(0, Math.min(1, options.volume));
       }
       
       if (options.playbackRate !== undefined) {
         this.audioElement.playbackRate = options.playbackRate;
       }
 
-      if (isSameOrigin) {
-        this.ensureAudioGraph();
-        this.connectElementToGraph(this.audioElement);
-        if (this.audioContext && this.audioContext.state !== 'running') {
-          try { await this.audioContext.resume(); } catch {}
-        }
-        await this.audioElement.play();
-        await this.fadeIn();
-      } else {
-        // Фолбэк: проигрываем напрямую без WebAudio (во избежание CORS-блокировок тишиной)
-        await this.audioElement.play();
-      }
+      await this.audioElement.play();
     } catch (error: any) {
       console.error('Play audio from URL error:', error);
-      // Фолбэк на прямое воспроизведение без WebAudio
-      try {
-        if (this.mediaElementSource) {
-          try { this.mediaElementSource.disconnect(); } catch {}
-          this.mediaElementSource = null;
-        }
-        if (this.audioElement) {
-          if (options.volume !== undefined) {
-            this.audioElement.volume = Math.max(0, Math.min(1, options.volume));
-          }
-          await this.audioElement.play();
-          return;
-        }
-      } catch {}
       throw new Error('Ошибка воспроизведения аудио');
     }
   }
@@ -318,11 +189,6 @@ class AudioService {
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
     }
-    // Отсоединим источник от графа, чтобы избежать наложений
-    try {
-      this.mediaElementSource?.disconnect();
-    } catch {}
-    this.mediaElementSource = null;
   }
 
   /**
@@ -361,11 +227,6 @@ class AudioService {
    * Установить громкость (0-1)
    */
   setVolume(volume: number): void {
-    this.ensureAudioGraph();
-    if (this.masterGain) {
-      this.masterGain.gain.value = Math.max(0, Math.min(1, volume));
-      return;
-    }
     if (this.audioElement) {
       this.audioElement.volume = Math.max(0, Math.min(1, volume));
     }
@@ -381,12 +242,11 @@ class AudioService {
   }
 
   /**
-   * Задать мастер-громкость (через Web Audio API)
+   * Задать мастер-громкость
    */
   setMasterVolume(volume: number): void {
-    this.ensureAudioGraph();
-    if (this.masterGain) {
-      this.masterGain.gain.value = Math.max(0, Math.min(1, volume));
+    if (this.audioElement) {
+      this.audioElement.volume = Math.max(0, Math.min(1, volume));
     }
   }
 
@@ -409,7 +269,9 @@ class AudioService {
    */
   onEnded(callback: () => void): void {
     if (this.audioElement) {
-      this.audioElement.addEventListener('ended', callback);
+      // Назначаем единичный обработчик, чтобы исключить накопление слушателей
+      this.audioElement.onended = null;
+      this.audioElement.addEventListener('ended', callback, { once: true });
     }
   }
 
@@ -433,8 +295,6 @@ class AudioService {
       this.audioElement.src = '';
       this.audioElement = null;
     }
-    try { this.mediaElementSource?.disconnect(); } catch {}
-    this.mediaElementSource = null;
     
     if (this.mediaRecorder && this.mediaRecorder.stream) {
       this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
@@ -444,19 +304,6 @@ class AudioService {
     this.audioChunks = [];
     this.isRecording = false;
     this.recordingStartTime = 0;
-
-    // Не закрываем AudioContext жестко (может переиспользоваться), но можно уменьшить громкость
-    try {
-      if (this.masterGain) {
-        const now = this.audioContext ? this.audioContext.currentTime : undefined;
-        if (now !== undefined) {
-          this.masterGain.gain.cancelScheduledValues(now);
-          this.masterGain.gain.setValueAtTime(this.defaultMasterVolume, now);
-        } else {
-          this.masterGain.gain.value = this.defaultMasterVolume;
-        }
-      }
-    } catch {}
   }
 
   /**
