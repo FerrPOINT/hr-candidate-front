@@ -394,8 +394,7 @@ components:
           format: int64
           description: Уникальный идентификатор собеседования
         status:
-          type: string
-          enum: [ NOT_STARTED, IN_PROGRESS, FINISHED ]
+          $ref: '#/components/schemas/InterviewStatusEnum'
           description: Статус собеседования
         startedAt:
           type: string
@@ -888,8 +887,7 @@ components:
               format: int64
               description: ID интервью
             status:
-              type: string
-              enum: [ NOT_STARTED, IN_PROGRESS, FINISHED ]
+              $ref: '#/components/schemas/InterviewStatusEnum'
               description: Статус интервью
             position:
               $ref: '#/components/schemas/PositionSummaryResponse'
@@ -910,6 +908,11 @@ components:
             - position
             - questionIds
           description: Информация об интервью и позиции
+    
+    InterviewStatusEnum:
+      type: string
+      enum: [ NOT_STARTED, IN_PROGRESS, FINISHED ]
+      description: Статус интервью/собеседования
       required:
         - welcome
         - test
