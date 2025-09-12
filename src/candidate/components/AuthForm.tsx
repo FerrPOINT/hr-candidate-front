@@ -17,9 +17,10 @@ interface JobPosition {
 interface AuthFormProps {
   onContinue: (userData: { firstName: string; lastName: string; email: string; jobPosition?: JobPosition; interviewId?: number }) => void;
   positionId: number; // ID вакансии, а не интервью
+  jobPosition?: JobPosition; // Если передано сверху — не дергаем API
 }
 
-export function AuthForm({ onContinue, positionId }: AuthFormProps) {
+export function AuthForm({ onContinue, positionId, jobPosition: jobPositionProp }: AuthFormProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,25 +28,31 @@ export function AuthForm({ onContinue, positionId }: AuthFormProps) {
   const [serverError, setServerError] = useState<string>('');
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [jobPosition, setJobPosition] = useState<JobPosition | null>(null);
-  const [isLoadingPosition, setIsLoadingPosition] = useState(true);
+  const [jobPosition, setJobPosition] = useState<JobPosition | null>(jobPositionProp ?? null);
+  const [isLoadingPosition, setIsLoadingPosition] = useState(!jobPositionProp);
 
-  // Загружаем информацию о вакансии при монтировании компонента (без localStorage)
+  // Загружаем информацию о вакансии только если сверху не пришла
   useEffect(() => {
+    if (jobPositionProp) {
+      setJobPosition(jobPositionProp);
+      setIsLoadingPosition(false);
+      return;
+    }
+
     const loadPositionInfo = async () => {
       try {
         setIsLoadingPosition(true);
         const positionSummary = await candidateAuthService.getPositionSummary(positionId);
-        setJobPosition({
+        const next: JobPosition = {
           title: positionSummary.title,
           department: positionSummary.department,
           company: positionSummary.company,
           type: positionSummary.type,
           questionsCount: positionSummary.questionsCount
-        });
+        };
+        setJobPosition(next);
       } catch (error) {
         console.error('Error loading position info:', error);
-        // Не подставляем фиктивные данные, оставляем jobPosition = null — UI покажет ошибку
         setJobPosition(null);
       } finally {
         setIsLoadingPosition(false);
@@ -55,7 +62,7 @@ export function AuthForm({ onContinue, positionId }: AuthFormProps) {
     if (positionId) {
       void loadPositionInfo();
     }
-  }, [positionId]);
+  }, [positionId, jobPositionProp]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -105,13 +112,68 @@ export function AuthForm({ onContinue, positionId }: AuthFormProps) {
         console.log('📥 AuthForm.handleSubmit - ответ от API:', response);
         
         if (response.success) {
-          onContinue({ 
-            firstName: firstName.trim(), 
-            lastName: lastName.trim(), 
-            email: email.trim(),
-            jobPosition: jobPosition || undefined,
-            interviewId: typeof response.interviewId === 'number' ? response.interviewId : undefined
-          });
+          if (response.token) {
+            // Токен уже есть — повторяем логику после успешной верификации: загружаем данные интервью и только затем показываем экран интервью
+            console.log('🔄 AuthForm: Токен получен, загружаем данные интервью перед переходом');
+
+            // Сохраняем токен и interviewId в localStorage
+            localStorage.setItem('candidate_token', response.token);
+            localStorage.setItem('candidate_interview_id', response.interviewId?.toString() || '');
+
+            try {
+              const verifiedInterviewId = response.interviewId as number | undefined;
+              if (!verifiedInterviewId) {
+                throw new Error('ID собеседования не найден');
+              }
+              const { apiService } = await import('../../services/apiService');
+              const interviewData = await apiService.getApiClient().candidates.getInterviewData(verifiedInterviewId);
+              localStorage.setItem('interview_data', JSON.stringify(interviewData.data));
+
+              // Вместо смены URL — сигнализируем вверх для переключения стейджа на интервью
+              onContinue({ 
+                firstName: firstName.trim(), 
+                lastName: lastName.trim(), 
+                email: email.trim(),
+                jobPosition: jobPosition || undefined,
+                interviewId: verifiedInterviewId
+              });
+            } catch (dataError: any) {
+              console.error('Error loading interview data after direct login:', dataError);
+              setServerError('Ошибка загрузки данных интервью. Попробуйте еще раз.');
+            }
+          } else {
+            // Если локально верификация отключена — загружаем данные и переключаемся сразу на интервью
+            const shouldVerify = (candidateAuthService as any).constructor.EMAIL_VERIFICATION_ENABLED === true;
+            if (shouldVerify) {
+              onContinue({ 
+                firstName: firstName.trim(), 
+                lastName: lastName.trim(), 
+                email: email.trim(),
+                jobPosition: jobPosition || undefined,
+                interviewId: typeof response.interviewId === 'number' ? response.interviewId : undefined
+              });
+            } else {
+              try {
+                const verifiedInterviewId = response.interviewId as number | undefined;
+                if (!verifiedInterviewId) {
+                  throw new Error('ID собеседования не найден');
+                }
+                const { apiService } = await import('../../services/apiService');
+                const interviewData = await apiService.getApiClient().candidates.getInterviewData(verifiedInterviewId);
+                localStorage.setItem('interview_data', JSON.stringify(interviewData.data));
+                onContinue({ 
+                  firstName: firstName.trim(), 
+                  lastName: lastName.trim(), 
+                  email: email.trim(),
+                  jobPosition: jobPosition || undefined,
+                  interviewId: verifiedInterviewId
+                });
+              } catch (dataError: any) {
+                console.error('Error loading interview data when verification disabled:', dataError);
+                setServerError('Ошибка загрузки данных интервью. Попробуйте еще раз.');
+              }
+            }
+          }
         } else {
           setServerError(response.error || 'Ошибка аутентификации');
         }

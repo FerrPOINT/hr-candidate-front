@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AuthForm } from './components/AuthForm';
 import { EmailVerification } from './components/EmailVerification';
 import { InterviewProcess } from './components/InterviewProcess';
 import './styles/globals.css';
+import { candidateAuthService } from './services/candidateAuthService';
 
 type AppStage = 'auth' | 'email-verification' | 'interview';
 
@@ -35,9 +36,37 @@ export default function App() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [jobPosition, setJobPosition] = useState<JobPosition | null>(null);
 
-  // Для AuthForm нужен positionId (ID вакансии), используем тот же interviewId как positionId
-  // В реальном приложении это должны быть разные параметры
-  const positionId = parseInt(urlInterviewId || '1', 10);
+  // Правильное разделение: positionId != interviewId. На этапе логина берём positionId из URL.
+  // Для совместимости используем urlInterviewId как positionId, если маршрут такой.
+  const positionId = Number.isNaN(Number(urlInterviewId)) ? 1 : parseInt(urlInterviewId || '1', 10);
+
+  // Централизованная загрузка summary позиции
+  useEffect(() => {
+    let isCancelled = false;
+    const load = async () => {
+      try {
+        const summary = await candidateAuthService.getPositionSummary(positionId);
+        if (isCancelled) return;
+        const next: JobPosition = {
+          title: summary.title,
+          department: summary.department,
+          company: summary.company,
+          type: summary.type,
+          questionsCount: summary.questionsCount
+        };
+        setJobPosition(next);
+        try { localStorage.setItem('position_summary', JSON.stringify(next)); } catch {}
+      } catch (e) {
+        if (isCancelled) return;
+        // Не перезаполняем заглушками — пусть UI отобразит отсутствие
+        setJobPosition(null);
+      }
+    };
+    if (positionId) {
+      void load();
+    }
+    return () => { isCancelled = true; };
+  }, [positionId]);
 
   const handleAuthComplete = async (data: UserData) => {
     console.log('🔐 Auth completed:', data);
@@ -51,7 +80,19 @@ export default function App() {
     if (data.jobPosition) {
       setJobPosition(data.jobPosition);
     }
-    setCurrentStage('email-verification');
+    // Определяем следующую стадию в зависимости от наличия токена и локального флага верификации
+    try {
+      const hasToken = !!candidateAuthService.getAuthToken();
+      const shouldVerify = (candidateAuthService as any).constructor.EMAIL_VERIFICATION_ENABLED === true;
+      if (hasToken || !shouldVerify) {
+        setCurrentStage('interview');
+      } else {
+        setCurrentStage('email-verification');
+      }
+    } catch {
+      // На всякий случай — если что-то пошло не так, оставляем прежнее поведение
+      setCurrentStage('email-verification');
+    }
   };
 
   const handleGoBackToAuth = () => {
@@ -81,6 +122,7 @@ export default function App() {
           <AuthForm 
             onContinue={handleAuthComplete}
             positionId={positionId}
+            jobPosition={jobPosition || undefined}
           />
         );
       

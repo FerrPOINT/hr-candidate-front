@@ -4,8 +4,8 @@ import { candidateApiService } from '../../services/candidateApiService';
 // Mock the candidateApiService
 jest.mock('../../services/candidateApiService', () => ({
   candidateApiService: {
-    authCandidate: jest.fn(),
-    verifyEmail: jest.fn(),
+    loginCandidate: jest.fn(),
+    verifyCandidateEmail: jest.fn(),
   },
 }));
 
@@ -19,55 +19,89 @@ describe('candidateAuthService', () => {
   });
 
   describe('authenticate', () => {
-    it('успешно аутентифицирует кандидата', async () => {
+    it('успешно аутентифицирует кандидата с верификацией', async () => {
       const authData = {
         firstName: 'Иван',
         lastName: 'Иванов',
         email: 'ivan@example.com',
-        token: 'invite-token'
+        positionId: 123
       };
 
       const mockResponse = {
-        candidate: { id: 123 },
-        token: 'auth-token-123',
+        interview: { id: 456 },
+        verificationRequired: true,
         message: 'Код подтверждения отправлен на email'
       };
 
-      mockCandidateApiService.authCandidate.mockResolvedValue(mockResponse);
+      mockCandidateApiService.loginCandidate.mockResolvedValue(mockResponse);
 
       const result = await candidateAuthService.authenticate(authData);
 
-      expect(mockCandidateApiService.authCandidate).toHaveBeenCalledWith({
+      expect(mockCandidateApiService.loginCandidate).toHaveBeenCalledWith({
         firstName: authData.firstName,
         lastName: authData.lastName,
-        email: authData.email
+        email: authData.email,
+        positionId: authData.positionId
       });
       expect(result).toEqual({
         success: true,
-        candidateId: '123',
-        message: 'Аутентификация успешна'
+        interviewId: 456,
+        message: 'Требуется верификация email'
       });
-      expect(localStorage.getItem('candidate_id')).toBe('123');
-      expect(localStorage.getItem('auth_token')).toBe('auth-token-123');
+    });
+
+    it('успешно аутентифицирует кандидата без верификации', async () => {
+      const authData = {
+        firstName: 'Иван',
+        lastName: 'Иванов',
+        email: 'ivan@example.com',
+        positionId: 123
+      };
+
+      const mockResponse = {
+        interview: { id: 456 },
+        verificationRequired: false,
+        token: 'auth-token-123',
+        message: 'Вход выполнен успешно'
+      };
+
+      mockCandidateApiService.loginCandidate.mockResolvedValue(mockResponse);
+
+      const result = await candidateAuthService.authenticate(authData);
+
+      expect(mockCandidateApiService.loginCandidate).toHaveBeenCalledWith({
+        firstName: authData.firstName,
+        lastName: authData.lastName,
+        email: authData.email,
+        positionId: authData.positionId
+      });
+      expect(result).toEqual({
+        success: true,
+        interviewId: 456,
+        token: 'auth-token-123',
+        message: 'Вход выполнен успешно'
+      });
     });
 
     it('обрабатывает ошибку аутентификации', async () => {
       const authData = {
         firstName: 'Иван',
         lastName: 'Иванов',
-        email: 'ivan@example.com'
+        email: 'ivan@example.com',
+        positionId: 123
       };
 
       const mockError = new Error('Неверные данные для авторизации');
 
-      mockCandidateApiService.authCandidate.mockRejectedValue(mockError);
+      mockCandidateApiService.loginCandidate.mockRejectedValue(mockError);
 
       const result = await candidateAuthService.authenticate(authData);
 
-      expect(mockCandidateApiService.authCandidate).toHaveBeenCalledWith({
+      expect(mockCandidateApiService.loginCandidate).toHaveBeenCalledWith({
         firstName: authData.firstName,
         lastName: authData.lastName,
-        email: authData.email
+        email: authData.email,
+        positionId: authData.positionId
       });
       expect(result).toEqual({
         success: false,
@@ -79,19 +113,21 @@ describe('candidateAuthService', () => {
       const authData = {
         firstName: 'Иван',
         lastName: 'Иванов',
-        email: 'ivan@example.com'
+        email: 'ivan@example.com',
+        positionId: 123
       };
 
       const mockError = new Error('found user false');
 
-      mockCandidateApiService.authCandidate.mockRejectedValue(mockError);
+      mockCandidateApiService.loginCandidate.mockRejectedValue(mockError);
 
       const result = await candidateAuthService.authenticate(authData);
 
-      expect(mockCandidateApiService.authCandidate).toHaveBeenCalledWith({
+      expect(mockCandidateApiService.loginCandidate).toHaveBeenCalledWith({
         firstName: authData.firstName,
         lastName: authData.lastName,
-        email: authData.email
+        email: authData.email,
+        positionId: authData.positionId
       });
       expect(result).toEqual({
         success: false,
@@ -103,19 +139,21 @@ describe('candidateAuthService', () => {
       const authData = {
         firstName: 'Иван',
         lastName: 'Иванов',
-        email: 'ivan@example.com'
+        email: 'ivan@example.com',
+        positionId: 123
       };
 
       const mockError = new Error('candidate not found');
 
-      mockCandidateApiService.authCandidate.mockRejectedValue(mockError);
+      mockCandidateApiService.loginCandidate.mockRejectedValue(mockError);
 
       const result = await candidateAuthService.authenticate(authData);
 
-      expect(mockCandidateApiService.authCandidate).toHaveBeenCalledWith({
+      expect(mockCandidateApiService.loginCandidate).toHaveBeenCalledWith({
         firstName: authData.firstName,
         lastName: authData.lastName,
-        email: authData.email
+        email: authData.email,
+        positionId: authData.positionId
       });
       expect(result).toEqual({
         success: false,
@@ -130,26 +168,27 @@ describe('candidateAuthService', () => {
       const verificationCode = '123456';
 
       const mockResponse = {
+        success: true,
         token: 'jwt-token-123',
-        candidate: { id: 123 }
+        interview: { id: 456 }
       };
 
-      mockCandidateApiService.verifyEmail.mockResolvedValue(mockResponse);
+      mockCandidateApiService.verifyCandidateEmail.mockResolvedValue(mockResponse);
 
       const result = await candidateAuthService.verifyEmail(email, verificationCode);
 
-      expect(mockCandidateApiService.verifyEmail).toHaveBeenCalledWith({
+      expect(mockCandidateApiService.verifyCandidateEmail).toHaveBeenCalledWith({
         email,
-        verificationCode,
-        firstName: '',
-        lastName: ''
+        verificationCode
       });
       expect(result).toEqual({
         success: true,
-        candidateId: '123',
+        interviewId: 456,
+        token: 'jwt-token-123',
         message: 'Email успешно верифицирован'
       });
-      expect(localStorage.getItem('auth_token')).toBe('jwt-token-123');
+      expect(localStorage.getItem('candidate_token')).toBe('jwt-token-123');
+      expect(localStorage.getItem('candidate_interview_id')).toBe('456');
     });
 
     it('обрабатывает ошибку верификации', async () => {
@@ -158,15 +197,13 @@ describe('candidateAuthService', () => {
 
       const mockError = new Error('Неверный код верификации');
 
-      mockCandidateApiService.verifyEmail.mockRejectedValue(mockError);
+      mockCandidateApiService.verifyCandidateEmail.mockRejectedValue(mockError);
 
       const result = await candidateAuthService.verifyEmail(email, verificationCode);
 
-      expect(mockCandidateApiService.verifyEmail).toHaveBeenCalledWith({
+      expect(mockCandidateApiService.verifyCandidateEmail).toHaveBeenCalledWith({
         email,
-        verificationCode,
-        firstName: '',
-        lastName: ''
+        verificationCode
       });
       expect(result).toEqual({
         success: false,
@@ -177,31 +214,31 @@ describe('candidateAuthService', () => {
 
   describe('token management', () => {
     it('получает токен из localStorage', () => {
-      localStorage.setItem('auth_token', 'test-token-123');
+      localStorage.setItem('candidate_token', 'test-token-123');
       expect(candidateAuthService.getAuthToken()).toBe('test-token-123');
     });
 
-    it('получает candidate_id из localStorage', () => {
-      localStorage.setItem('candidate_id', 'test-id-123');
+    it('получает candidate_interview_id из localStorage', () => {
+      localStorage.setItem('candidate_interview_id', 'test-id-123');
       expect(candidateAuthService.getCandidateId()).toBe('test-id-123');
     });
 
     it('проверяет авторизацию', () => {
       expect(candidateAuthService.isAuthenticated()).toBe(false);
       
-      localStorage.setItem('candidate_id', 'test-id');
-      localStorage.setItem('auth_token', 'test-token');
+      localStorage.setItem('candidate_interview_id', 'test-id');
+      localStorage.setItem('candidate_token', 'test-token');
       expect(candidateAuthService.isAuthenticated()).toBe(true);
     });
 
     it('очищает авторизацию', () => {
-      localStorage.setItem('candidate_id', 'test-id');
-      localStorage.setItem('auth_token', 'test-token');
+      localStorage.setItem('candidate_interview_id', 'test-id');
+      localStorage.setItem('candidate_token', 'test-token');
       
       candidateAuthService.clearAuth();
       
-      expect(localStorage.getItem('candidate_id')).toBeNull();
-      expect(localStorage.getItem('auth_token')).toBeNull();
+      expect(localStorage.getItem('candidate_interview_id')).toBeNull();
+      expect(localStorage.getItem('candidate_token')).toBeNull();
     });
   });
 });

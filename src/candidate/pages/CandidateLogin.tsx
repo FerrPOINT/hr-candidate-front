@@ -36,58 +36,27 @@ const CandidateLogin: React.FC = () => {
   const [isLoadingPosition, setIsLoadingPosition] = useState(true);
   const [positionId, setPositionId] = useState<number | null>(null);
 
-  // Получаем positionId из interviewId через API
+  // Инициализируем positionId из URL и читаем summary из кэша, не дергая API по interviewId
   useEffect(() => {
-    console.log('🔄 useEffect для загрузки данных о вакансии вызван');
-    console.log('📝 interviewId:', interviewId);
-    
-    const loadPositionInfo = async () => {
-      if (!interviewId) {
-        console.log('❌ interviewId отсутствует');
-        return;
+    setIsLoadingPosition(true);
+    try {
+      const pid = parseInt(interviewId || '0', 10);
+      if (!Number.isNaN(pid) && pid > 0) {
+        setPositionId(pid);
       }
-      
-      try {
-        console.log('📤 Начинаем загрузку информации о вакансии для interviewId:', interviewId);
-        setIsLoadingPosition(true);
-        
-        // Получаем информацию о вакансии через interviewId
-        console.log('🔐 Вызываем candidateAuthService.getPositionSummary...');
-        const positionSummary = await candidateAuthService.getPositionSummary(parseInt(interviewId, 10));
-        console.log('📥 Получена информация о вакансии:', positionSummary);
-        
+      const raw = localStorage.getItem('position_summary');
+      if (raw) {
+        const summary = JSON.parse(raw);
         setJobPosition({
-          title: positionSummary.title,
-          department: positionSummary.department,
-          company: positionSummary.company,
-          type: positionSummary.type,
-          questionsCount: positionSummary.questionsCount
+          title: summary.title,
+          department: summary.department,
+          company: summary.company,
+          type: summary.type,
+          questionsCount: summary.questionsCount
         });
-        
-        // Используем ID вакансии из ответа API
-        console.log('💾 Устанавливаем positionId:', positionSummary.id);
-        setPositionId(positionSummary.id);
-      } catch (error) {
-        console.error('💥 Ошибка загрузки информации о вакансии:', error);
-        // В случае ошибки используем заглушку и дефолтный positionId
-        console.log('🔄 Используем fallback данные');
-        setJobPosition({
-          title: 'Software Engineer',
-          department: 'Engineering',
-          company: 'WMT group',
-          type: 'Full-time',
-          questionsCount: 6
-        });
-        const fallbackPositionId = parseInt(interviewId, 10);
-        console.log('💾 Устанавливаем fallback positionId:', fallbackPositionId);
-        setPositionId(fallbackPositionId);
-      } finally {
-        console.log('🏁 Завершаем загрузку данных о вакансии');
-        setIsLoadingPosition(false);
       }
-    };
-
-    loadPositionInfo();
+    } catch {}
+    setIsLoadingPosition(false);
   }, [interviewId]);
 
   const validateForm = (): boolean => {
@@ -162,13 +131,52 @@ const CandidateLogin: React.FC = () => {
       if (response.success) {
         console.log('✅ Аутентификация успешна:', response);
         
-        // Проверяем, что есть candidateId для безопасности
-        if (response.candidateId) {
-          console.log('🔄 Переходим на страницу верификации');
-          // Успешный логин - переходим на страницу верификации
-          navigate(`/candidate/verify-email?email=${encodeURIComponent(email.trim())}&interviewId=${interviewId}`);
+        // Проверяем, что есть interviewId
+        if (response.interviewId) {
+          if (response.token) {
+            // Токен уже есть — загружаем данные интервью, как после успешной верификации email
+            console.log('🔄 Верификация не требуется, загружаем данные интервью перед переходом');
+
+            // Сохраняем токен и interviewId в localStorage для дальнейшего использования
+            localStorage.setItem('candidate_token', response.token);
+            localStorage.setItem('candidate_interview_id', response.interviewId.toString());
+
+            try {
+              const { apiService } = await import('../../services/apiService');
+              const interviewData = await apiService.getApiClient().candidates.getInterviewData(response.interviewId);
+              localStorage.setItem('interview_data', JSON.stringify(interviewData.data));
+            } catch (dataError: any) {
+              console.error('Error loading interview data after direct login:', dataError);
+              setServerError('Ошибка загрузки данных интервью. Попробуйте еще раз.');
+              setIsLoading(false);
+              return;
+            }
+
+            // После успешной загрузки данных переходим к интервью
+            navigate(`/candidate/interview/${response.interviewId}`);
+          } else {
+            // Верификация может быть отключена локально — в таком случае загружаем данные интервью и идём дальше
+            const shouldVerify = (candidateAuthService as any).constructor.EMAIL_VERIFICATION_ENABLED === true;
+            if (shouldVerify) {
+              console.log('🔄 Переходим на страницу верификации');
+              navigate(`/candidate/verify-email?email=${encodeURIComponent(email.trim())}&interviewId=${response.interviewId}`);
+            } else {
+              console.log('ℹ️ Локальная верификация отключена — загружаем данные интервью и переходим далее');
+              try {
+                const { apiService } = await import('../../services/apiService');
+                const interviewData = await apiService.getApiClient().candidates.getInterviewData(response.interviewId);
+                localStorage.setItem('interview_data', JSON.stringify(interviewData.data));
+                navigate(`/candidate/interview/${response.interviewId}`);
+              } catch (dataError: any) {
+                console.error('Error loading interview data when verification disabled:', dataError);
+                setServerError('Ошибка загрузки данных интервью. Попробуйте еще раз.');
+                setIsLoading(false);
+                return;
+              }
+            }
+          }
         } else {
-          console.log('⚠️ Неожиданный ответ - нет candidateId');
+          console.log('⚠️ Неожиданный ответ - нет interviewId');
           // Неожиданный ответ - показываем ошибку
           setServerError('Неожиданный ответ от сервера. Пожалуйста, попробуйте еще раз.');
         }
