@@ -1,8 +1,7 @@
 import { type ApiClient } from '../api/apiClient';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
-import { Configuration } from '../../generated-src/client/configuration';
-import { CandidatesApi } from '../../generated-src/client/apis/candidates-api';
+import { Configuration, CandidatesApi } from '../../generated-src/client';
 
 class ApiService {
 	getApiClient(): ApiClient {
