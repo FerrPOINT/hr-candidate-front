@@ -352,7 +352,7 @@ export function VoiceRecorder({
                     </Button>
                   )}
                   
-                  {onSkipQuestion && (
+                  {false && onSkipQuestion && (
                     <Button
                       onClick={onSkipQuestion}
                       variant="outline"

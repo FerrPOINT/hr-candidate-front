@@ -602,17 +602,6 @@ export function NewInterviewChat() {
                               <span>Записать ответ</span>
                             </div>
                           </button>
-                          
-                                                     <button
-                             onClick={handleSkipQuestion}
-                             className="border-2 border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 px-8 py-4 font-medium shadow-md transition-all duration-200 bg-white text-lg"
-                             style={{ borderRadius: '30px', height: '56px' }}
-                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
-                              <span>Пропустить вопрос</span>
-                            </div>
-                          </button>
                         </>
                       )}
                     </motion.div>

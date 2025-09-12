@@ -7,6 +7,7 @@ export interface AudioRecorderOptions {
 export interface AudioPlayerOptions {
   volume?: number;
   playbackRate?: number;
+  enableFadeIn?: boolean;
 }
 
 class AudioService {
@@ -15,7 +16,7 @@ class AudioService {
   private audioElement: HTMLAudioElement | null = null;
   private recordingStartTime: number = 0;
   private isRecording: boolean = false;
-  private readonly defaultVolume: number = 0.8;
+  private readonly defaultVolume: number = 1.0;
   private readonly fadeInDurationMs: number = 350;
 
   /**
@@ -141,6 +142,12 @@ class AudioService {
     try {
       const audioUrl = URL.createObjectURL(audioBlob);
       this.audioElement = new Audio(audioUrl);
+      this.audioElement.preload = 'auto';
+      try { this.audioElement.crossOrigin = 'anonymous'; } catch {}
+      // Сохраняем оригинальный питч при изменении скорости
+      try { (this.audioElement as any).preservesPitch = true; } catch {}
+      try { (this.audioElement as any).mozPreservesPitch = true; } catch {}
+      try { (this.audioElement as any).webkitPreservesPitch = true; } catch {}
       if (this.audioElement) this.audioElement.volume = Math.max(0, Math.min(1, options.volume ?? this.defaultVolume));
       
       if (options.volume !== undefined) {
@@ -149,9 +156,15 @@ class AudioService {
       
       if (options.playbackRate !== undefined) {
         this.audioElement.playbackRate = options.playbackRate;
+      } else {
+        this.audioElement.playbackRate = 1.0;
       }
 
       await this.audioElement.play();
+      // Плавный старт доступен только по явному флагу, по умолчанию — без затуханий
+      if (options.enableFadeIn) {
+        await this.fadeInElementVolume(options.volume, this.fadeInDurationMs);
+      }
     } catch (error: any) {
       console.error('Play audio error:', error);
       throw new Error('Ошибка воспроизведения аудио');
@@ -164,6 +177,12 @@ class AudioService {
   async playAudioFromUrl(audioUrl: string, options: AudioPlayerOptions = {}): Promise<void> {
     try {
       this.audioElement = new Audio(audioUrl);
+      this.audioElement.preload = 'auto';
+      try { this.audioElement.crossOrigin = 'anonymous'; } catch {}
+      // Сохраняем оригинальный питч при изменении скорости
+      try { (this.audioElement as any).preservesPitch = true; } catch {}
+      try { (this.audioElement as any).mozPreservesPitch = true; } catch {}
+      try { (this.audioElement as any).webkitPreservesPitch = true; } catch {}
       if (this.audioElement) this.audioElement.volume = Math.max(0, Math.min(1, options.volume ?? this.defaultVolume));
       
       if (options.volume !== undefined) {
@@ -172,9 +191,14 @@ class AudioService {
       
       if (options.playbackRate !== undefined) {
         this.audioElement.playbackRate = options.playbackRate;
+      } else {
+        this.audioElement.playbackRate = 1.0;
       }
 
       await this.audioElement.play();
+      if (options.enableFadeIn) {
+        await this.fadeInElementVolume(options.volume, this.fadeInDurationMs);
+      }
     } catch (error: any) {
       console.error('Play audio from URL error:', error);
       throw new Error('Ошибка воспроизведения аудио');

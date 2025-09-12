@@ -215,15 +215,17 @@ const InterviewCompletion: React.FC<InterviewCompletionProps> = ({ interviewId, 
                     onClick={() => {
                       const fullAudioUrl = getFullAudioUrl(message.audioUrl);
                       logAudioUrl(message.audioUrl, fullAudioUrl, 'InterviewCompletion');
-                      
-                      const audio = new Audio(fullAudioUrl);
-                      audio.play().catch((error) => {
-                        logger.error('Failed to play completion audio', error as Error, { 
-                          component: 'InterviewCompletion', 
-                          interviewId: interviewId.toString(),
-                          originalAudioUrl: message.audioUrl,
-                          fullAudioUrl
-                        });
+                      import('../../services/audioService').then(({ audioService }) => {
+                        audioService.stopAudio();
+                        audioService.playAudioFromUrl(fullAudioUrl, { volume: 0.8 })
+                          .catch((error) => {
+                            logger.error('Failed to play completion audio', error as Error, { 
+                              component: 'InterviewCompletion', 
+                              interviewId: interviewId.toString(),
+                              originalAudioUrl: message.audioUrl,
+                              fullAudioUrl
+                            });
+                          });
                       });
                     }}
                   >
