@@ -1,5 +1,6 @@
 import { candidateApiService } from './candidateApiService';
 import { useAuthStore } from '../../store/authStore';
+import { logger } from '../../utils/logger';
 import type { CandidateLoginRequest, CandidateLoginResponse, CandidateEmailVerificationRequest, CandidateEmailVerificationResponse } from '../../api/models';
 
 export interface CandidateAuthData {
@@ -37,11 +38,14 @@ class CandidateAuthService {
    * Аутентификация кандидата
    */
   async authenticate(authData: CandidateAuthData): Promise<AuthResponse> {
-    console.log('🚀 candidateAuthService.authenticate вызван');
-    console.log('📝 Входные данные:', { email: authData.email, firstName: authData.firstName, positionId: authData.positionId });
+    logger.debug('candidateAuthService.authenticate вызван', { 
+      email: authData.email, 
+      firstName: authData.firstName, 
+      positionId: authData.positionId 
+    });
     
     try {
-      console.log('🔐 Вызываем candidateApiService.loginCandidate...');
+      logger.debug('Вызываем candidateApiService.loginCandidate');
       const response = await candidateApiService.loginCandidate({
         firstName: authData.firstName,
         lastName: authData.lastName,
@@ -49,7 +53,7 @@ class CandidateAuthService {
         positionId: authData.positionId
       });
 
-      console.log('📥 Получен ответ от candidateApiService:', response);
+      logger.debug('Получен ответ от candidateApiService', { response });
 
       // Нормализуем возможные варианты структуры ответа бэкенда
       const raw: any = response as any;
@@ -84,7 +88,7 @@ class CandidateAuthService {
 
       if (shouldVerify) {
         // Верификация требуется - переходим на страницу верификации
-        console.log('✅ Верификация требуется, interviewId:', interviewId);
+        logger.info('Верификация требуется', { interviewId: interviewId.toString() });
         return {
           success: true,
           interviewId,
@@ -92,7 +96,7 @@ class CandidateAuthService {
         };
       } else if (token) {
         // Верификация не требуется — сохраняем токен так же, как после верификации email
-        console.log('✅ Верификация не требуется, есть токен, interviewId:', interviewId);
+        logger.info('Верификация не требуется, есть токен', { interviewId: interviewId.toString() });
 
         try {
           localStorage.setItem('candidate_token', token);
@@ -132,14 +136,14 @@ class CandidateAuthService {
       if (errorMessage.includes('не назначено собеседование') ||
           errorMessage.toLowerCase().includes('found user false') ||
           errorMessage.toLowerCase().includes('candidate not found')) {
-        console.log('🚫 Кандидат не найден, возвращаем специальную ошибку');
+        logger.warn('Кандидат не найден, возвращаем специальную ошибку');
         return {
           success: false,
           error: 'Извините, для вас не назначено собеседование. Пожалуйста, обратитесь к рекрутеру.'
         };
       }
       
-      console.log('🚨 Возвращаем общую ошибку:', errorMessage);
+      logger.error('Возвращаем общую ошибку', error, { errorMessage });
       return {
         success: false,
         error: errorMessage
@@ -152,7 +156,7 @@ class CandidateAuthService {
    */
   async verifyEmail(email: string, verificationCode: string): Promise<AuthResponse> {
     try {
-      console.log('Starting email verification:', { email, code: verificationCode });
+      logger.debug('Starting email verification', { email, code: verificationCode });
 
       // Используем новый endpoint verifyCandidateEmail
       const response = await candidateApiService.verifyCandidateEmail({
@@ -160,7 +164,7 @@ class CandidateAuthService {
         verificationCode
       });
 
-      console.log('Email verification response:', response);
+      logger.debug('Email verification response', { response });
 
       const interviewId = response?.interview?.id as number | undefined;
 
@@ -243,7 +247,7 @@ class CandidateAuthService {
   clearAuth(): void { 
     localStorage.removeItem('candidate_token');
     localStorage.removeItem('candidate_interview_id');
-    console.log('Auth data cleared'); 
+    logger.debug('Auth data cleared'); 
   }
 
   /**
@@ -295,10 +299,10 @@ class CandidateAuthService {
    */
   async checkInterviewExists(email: string): Promise<{ exists: boolean, interviewId?: number, message?: string }> {
     try {
-      console.log('Checking interview exists for email:', email);
+      logger.debug('Checking interview exists for email', { email });
       
       const response = await candidateApiService.checkInterviewExists(email);
-      console.log('Interview check response:', response);
+      logger.debug('Interview check response', { response });
       
       return {
         exists: response.exists,
@@ -320,10 +324,10 @@ class CandidateAuthService {
    */
   async startInterview(interviewId: number, token: string): Promise<{ success: boolean, message?: string }> {
     try {
-      console.log('Starting interview:', { interviewId, token: token.substring(0, 10) + '...' });
+      logger.debug('Starting interview', { interviewId: interviewId.toString(), token: token.substring(0, 10) + '...' });
       
       const response = await candidateApiService.startInterview(interviewId, token);
-      console.log('Start interview response:', response);
+      logger.debug('Start interview response', { response });
       
       if (response.success) {
         return {

@@ -1,16 +1,13 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import CandidateLogin from '../../pages/CandidateLogin';
 
 // Мок для candidateAuthService
 const mockAuthenticate = jest.fn();
-const mockGetPositionSummary = jest.fn();
 
 jest.mock('../../services/candidateAuthService', () => ({
   candidateAuthService: {
     authenticate: mockAuthenticate,
-    getPositionSummary: mockGetPositionSummary,
   },
   CandidateAuthData: jest.fn(),
 }));
@@ -23,18 +20,35 @@ jest.mock('react-router-dom', () => ({
   useParams: () => ({ interviewId: '123' }),
 }));
 
+import CandidateLogin from '../../pages/CandidateLogin';
+
 describe('CandidateLogin', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    // Мок для getPositionSummary
-    mockGetPositionSummary.mockResolvedValue({
+    // Мок для localStorage
+    const mockPositionSummary = {
       id: 123,
       title: 'Software Engineer',
       department: 'Engineering',
       company: 'WMT group',
       type: 'Full-time',
       questionsCount: 6
+    };
+    
+    // Мокаем localStorage
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn((key) => {
+          if (key === 'position_summary') {
+            return JSON.stringify(mockPositionSummary);
+          }
+          return null;
+        }),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+      },
+      writable: true,
     });
   });
 
@@ -127,9 +141,9 @@ describe('CandidateLogin', () => {
       </MemoryRouter>
     );
 
-    // Ждем загрузки данных о вакансии
+    // Ждем загрузки данных о вакансии из localStorage
     await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
+      expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     });
 
     const submitButton = screen.getByRole('button', { name: /продолжить/i });
@@ -147,9 +161,9 @@ describe('CandidateLogin', () => {
       </MemoryRouter>
     );
 
-    // Ждем загрузки данных о вакансии
+    // Ждем загрузки данных о вакансии из localStorage
     await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
+      expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     });
 
     const submitButton = screen.getByRole('button', { name: /продолжить/i });
@@ -185,9 +199,9 @@ describe('CandidateLogin', () => {
       </MemoryRouter>
     );
 
-    // Ждем загрузки данных о вакансии
+    // Ждем загрузки данных о вакансии из localStorage
     await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
+      expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     });
 
     const submitButton = screen.getByRole('button', { name: /продолжить/i });
@@ -231,9 +245,9 @@ describe('CandidateLogin', () => {
       </MemoryRouter>
     );
 
-    // Ждем загрузки данных о вакансии
+    // Ждем загрузки данных о вакансии из localStorage
     await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
+      expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     });
 
     const submitButton = screen.getByRole('button', { name: /продолжить/i });
@@ -262,9 +276,9 @@ describe('CandidateLogin', () => {
       </MemoryRouter>
     );
 
-    // Ждем загрузки данных о вакансии
+    // Ждем загрузки данных о вакансии из localStorage
     await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
+      expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     });
 
     // Проверяем, что информация о вакансии отображается
@@ -276,19 +290,21 @@ describe('CandidateLogin', () => {
   });
 
   it('кнопка Продолжить правильно отключается при отсутствии positionId', async () => {
-    // Мокаем ошибку загрузки positionId
-    mockGetPositionSummary.mockRejectedValue(new Error('Failed to load position'));
+    // Мокаем отсутствие данных в localStorage
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => null),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+      },
+      writable: true,
+    });
     
     render(
       <MemoryRouter>
         <CandidateLogin />
       </MemoryRouter>
     );
-
-    // Ждем завершения загрузки
-    await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
-    });
 
     const submitButton = screen.getByRole('button', { name: /продолжить/i });
     
@@ -303,9 +319,9 @@ describe('CandidateLogin', () => {
       </MemoryRouter>
     );
 
-    // Ждем загрузки данных о вакансии
+    // Ждем загрузки данных о вакансии из localStorage
     await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
+      expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     });
 
     const submitButton = screen.getByRole('button', { name: /продолжить/i });
@@ -345,9 +361,9 @@ describe('CandidateLogin', () => {
       </MemoryRouter>
     );
 
-    // Ждем загрузки данных о вакансии
+    // Ждем загрузки данных о вакансии из localStorage
     await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
+      expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     });
 
     // Заполняем форму и отправляем
@@ -390,9 +406,9 @@ describe('CandidateLogin', () => {
       </MemoryRouter>
     );
 
-    // Ждем загрузки данных о вакансии
+    // Ждем загрузки данных о вакансии из localStorage
     await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
+      expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     });
 
     // Заполняем форму и отправляем
@@ -438,9 +454,9 @@ describe('CandidateLogin', () => {
       </MemoryRouter>
     );
 
-    // Ждем загрузки данных о вакансии
+    // Ждем загрузки данных о вакансии из localStorage
     await waitFor(() => {
-      expect(mockGetPositionSummary).toHaveBeenCalledWith(123);
+      expect(screen.getByText(/software engineer/i)).toBeInTheDocument();
     });
 
     // Заполняем форму и отправляем

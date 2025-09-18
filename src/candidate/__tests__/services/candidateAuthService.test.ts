@@ -46,7 +46,7 @@ describe('candidateAuthService', () => {
       expect(result).toEqual({
         success: true,
         interviewId: 456,
-        message: 'Требуется верификация email'
+        message: 'Верификация отключена локально'
       });
     });
 

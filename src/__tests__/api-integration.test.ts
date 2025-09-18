@@ -6,7 +6,7 @@ describe('API Integration', () => {
   it('should have generated API models', () => {
     // Проверяем, что модели API доступны
     expect(() => {
-      require('../../api/models');
+      require('../../api/models.auto');
     }).not.toThrow();
   });
 
