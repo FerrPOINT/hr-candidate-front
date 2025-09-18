@@ -4,6 +4,7 @@ import { Logo } from '../components/';
 import { HelpButton, HelpModal } from '../components/';
 import { candidateAuthService } from '../services/candidateAuthService';
 import { candidateApiService } from '../services/candidateApiService';
+import { Play, Pause, Mic, MicOff, Volume2 } from 'lucide-react';
 // Локальный тип для голосового вопроса
 interface VoiceQuestionResponse {
   id: string;
@@ -11,7 +12,6 @@ interface VoiceQuestionResponse {
   audioUrl?: string;
   duration?: number;
 }
-import { Play, Pause, Mic, MicOff, Volume2 } from 'lucide-react';
 
 interface InterviewData {
   interviewId: string;

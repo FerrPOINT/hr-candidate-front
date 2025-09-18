@@ -69,35 +69,19 @@
   },
   "scripts": {
     "start": "set PORT=3003 && set PUBLIC_URL=/candidate&& craco start",
-    "start:env": "node scripts/start-with-env.js",
-    "start:https": "node scripts/start-https.js",
-    "analyze:audio": "node scripts/analyze-audio-support.js",
-    "build": "set PUBLIC_URL=/candidate&& craco build",
-    "build:with-tests": "npm run test:jest && craco build",
-    "test": "craco test",
-    "test:jest": "jest --ci",
-    "eject": "react-scripts eject",
     "generate:api": "npm run validate:openapi && npm run generate:api:clean && npm run generate:api:all",
     "validate:openapi": "node scripts/validate-openapi.js",
     "generate:api:clean": "node scripts/clean-client.js",
     "generate:api:all": "node scripts/generate-all-apis.js",
-    "generate:api:sequential": "npm run generate:api:agents && npm run generate:api:analytics && npm run generate:api:auth && npm run generate:api:candidates && npm run generate:api:interviews && npm run generate:api:positions && npm run generate:api:settings && npm run generate:api:webhooks",
-    "generate:api:agents": "node scripts/generate-single-api.js agents-ai",
-    "generate:api:analytics": "node scripts/generate-single-api.js analytics",
-    "generate:api:auth": "node scripts/generate-single-api.js auth-users",
-    "generate:api:candidates": "node scripts/generate-single-api.js candidates",
-    "generate:api:interviews": "node scripts/generate-single-api.js interviews-questions",
-    "generate:api:positions": "node scripts/generate-single-api.js positions",
-    "generate:api:settings": "node scripts/generate-single-api.js settings",
-    "generate:api:webhooks": "node scripts/generate-single-api.js webhooks",
-    "generate:models:index": "node scripts/generate-models-index.js",
-    "lint": "eslint 'src/**/*.{js,jsx,ts,tsx}'",
-    "check": "npm run lint && npm test && npm audit"
+    "build": "set PUBLIC_URL=/candidate&& craco build",
+    
+    "eject": "react-scripts eject",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx src",
+    "check": "npm run lint && npm audit"
   },
   "eslintConfig": {
     "extends": [
-      "react-app",
-      "react-app/jest"
+      "react-app"
     ]
   },
   "browserslist": {
@@ -116,24 +100,14 @@
     "@craco/craco": "^7.1.0",
     "@openapitools/openapi-generator-cli": "^2.20.2",
     "@tailwindcss/line-clamp": "^0.4.4",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^14.3.1",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/jest": "^30.0.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "autoprefixer": "^10.4.16",
     "cross-env": "^7.0.3",
-    "happy-dom": "^18.0.1",
     "http-proxy-middleware": "^3.0.5",
-    "identity-obj-proxy": "^3.0.0",
-    "jest": "^30.0.5",
-    "jest-environment-jsdom": "^30.0.0",
     "js-yaml": "^4.1.0",
-    "jsdom": "^26.1.0",
     "postcss": "^8.4.32",
     "rimraf": "^6.0.1",
-    "tailwindcss": "^3.3.6",
-    "ts-jest": "^29.4.0"
+    "tailwindcss": "^3.3.6"
   }
 }

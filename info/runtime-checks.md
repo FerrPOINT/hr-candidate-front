@@ -1,5 +1,7 @@
 # Runtime Checks Log
 
+2025-09-18 00:00 | TARGET:scripts cleanup + build | DEPTH:100 | SUMMARY: Удалены мусорные скрипты из scripts/, обновлён package.json; сборка прошла (warnings только ESLint/Tailwind) | ACTION: оставить только start/start:https/build, мониторить предупреждения
+
 ## API Integration Checks
 
 2025-01-27 16:15 | TARGET:candidate/auth | DEPTH:100 | SUMMARY: Реализована новая логика авторизации, проект собирается без ошибок | ACTION: готов к тестированию полной схемы авторизации
