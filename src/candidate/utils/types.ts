@@ -1,41 +1,22 @@
-export interface Question {
-  id: string;
-  text: string;
-  category: string;
-  maxDuration: number;
-}
+export const InterviewStage = {
+  WELCOME: 'welcome',
+  MICROPHONE_CHECK: 'microphone_check',
+  INSTRUCTIONS: 'instructions',
+  INTERVIEW: 'interview',
+  COMPLETE: 'complete',
+} as const;
 
-export interface JobPosition {
-  title: string;
-  department: string;
-  company: string;
-  type: string;
-  questionsCount: number;
-}
+export const QuestionType = {
+  TEXT: 'text',
+  AUDIO: 'audio',
+} as const;
 
-export interface CompanyQuestion {
-  id: string;
-  text: string;
-}
+export const AudioSettings = {
+  DEFAULT_VOLUME: 0.8,
+  DEFAULT_PLAYBACK_RATE: 1.0,
+  MAX_RECORDING_TIME: 120,
+} as const;
 
-export interface ProcessQuestion {
-  id: number;
-  text: string;
-  timeLimit: number;
-}
-
-export interface ChatMessage {
-  id: string;
-  type: 'ai' | 'user';
-  content: string;
-  timestamp: string;
-}
-
-export interface QuestionCard {
-  id: string;
-  questionIndex: number;
-  text: string;
-  status: 'active' | 'completed';
-  timeRemaining?: number;
-  isNew?: boolean;
-}
+export type InterviewStageType = typeof InterviewStage[keyof typeof InterviewStage];
+export type QuestionTypeType = typeof QuestionType[keyof typeof QuestionType];
+export type AudioSettingsType = typeof AudioSettings;

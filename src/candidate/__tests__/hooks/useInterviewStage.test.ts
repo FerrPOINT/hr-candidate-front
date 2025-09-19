@@ -22,7 +22,9 @@ describe('useInterviewStage', () => {
     });
 
     // Ждем завершения асинхронной операции
-    await new Promise(resolve => setTimeout(resolve, 1100));
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 1100));
+    });
 
     expect(result.current.currentStage).toBe(1);
     expect(result.current.stages[result.current.currentStage].name).toBe('microphone');
@@ -37,7 +39,9 @@ describe('useInterviewStage', () => {
     });
 
     // Ждем завершения асинхронной операции
-    await new Promise(resolve => setTimeout(resolve, 1100));
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 1100));
+    });
 
     expect(result.current.currentStage).toBe(1);
 
@@ -68,24 +72,32 @@ describe('useInterviewStage', () => {
     act(() => {
       result.current.nextStage(); // 1
     });
-    await new Promise(resolve => setTimeout(resolve, 1100));
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 1100));
+    });
     
     act(() => {
       result.current.nextStage(); // 2
     });
-    await new Promise(resolve => setTimeout(resolve, 1100));
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 1100));
+    });
     
     act(() => {
       result.current.nextStage(); // 3
     });
-    await new Promise(resolve => setTimeout(resolve, 1100));
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 1100));
+    });
 
     expect(result.current.currentStage).toBe(3);
 
     act(() => {
       result.current.nextStage();
     });
-    await new Promise(resolve => setTimeout(resolve, 1100));
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 1100));
+    });
 
     expect(result.current.currentStage).toBe(3);
   });

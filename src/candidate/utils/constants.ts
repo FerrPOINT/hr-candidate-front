@@ -1,85 +1,22 @@
-import { Question, JobPosition, CompanyQuestion, ProcessQuestion } from './types';
+export const INTERVIEW_STAGES = {
+  WELCOME: 'welcome',
+  MICROPHONE_CHECK: 'microphone_check',
+  INSTRUCTIONS: 'instructions',
+  INTERVIEW: 'interview',
+  COMPLETE: 'complete',
+} as const;
 
-export const questions: Question[] = [
-  {
-    id: '1',
-    text: 'Расскажите о себе и своем опыте работы в сфере разработки. Что вас привело в эту сферу и какие технологии вам наиболее интересны?',
-    category: 'О себе',
-    maxDuration: 150 // 2:30
-  },
-  {
-    id: '2', 
-    text: 'Опишите самый сложный проект, над которым вы работали. Какие технические вызовы вы преодолели и что нового узнали?',
-    category: 'Опыт работы',
-    maxDuration: 150 // 2:30
-  },
-  {
-    id: '3',
-    text: 'Как вы подходите к изучению новых технологий? Приведите пример последней технологии, которую вы освоили.',
-    category: 'Развитие',
-    maxDuration: 150 // 2:30
-  },
-  {
-    id: '4',
-    text: 'Расскажите о ситуации, когда вам пришлось работать в команде над сложной задачей. Как вы организовывали работу?',
-    category: 'Командная работа',
-    maxDuration: 150 // 2:30
-  },
-  {
-    id: '5',
-    text: 'Почему вы хотите работать именно в нашей компании? Что вас привлекает в позиции Frontend Разработчика?',
-    category: 'Мотивация',
-    maxDuration: 150 // 2:30
-  }
-];
+export const QUESTION_TYPES = {
+  TEXT: 'text',
+  AUDIO: 'audio',
+} as const;
 
-export const jobPosition: JobPosition = {
-  title: "Frontend Разработчик",
-  department: "Разработка", 
-  company: "WMT group",
-  type: "Полная занятость",
-  questionsCount: questions.length
-};
+export const AUDIO_SETTINGS = {
+  DEFAULT_VOLUME: 0.8,
+  DEFAULT_PLAYBACK_RATE: 1.0,
+  MAX_RECORDING_TIME_SECONDS: 120,
+} as const;
 
-export const companyQuestions: CompanyQuestion[] = [
-  {
-    id: '1',
-    text: 'Какие технологии используются в команде?'
-  },
-  {
-    id: '2',
-    text: 'Как организован процесс разработки?'
-  },
-  {
-    id: '3',
-    text: 'Какие возможности для профессионального роста?'
-  },
-  {
-    id: '4',
-    text: 'Как выглядит типичный рабочий день?'
-  },
-  {
-    id: '5',
-    text: 'Есть ли менторство для новых сотрудников?'
-  }
-];
-
-export const processQuestions: ProcessQuestion[] = [
-  {
-    id: 1,
-    text: "Расскажите о вашем опыте работы и о проектах на последних двух местах работы.",
-    timeLimit: 150
-  },
-  {
-    id: 2,
-    text: "Опишите самый сложный проект, над которым вы работали, и как вы его решили.",
-    timeLimit: 150
-  },
-  {
-    id: 3,
-    text: "Какие технологии вы изучали в последнее время и почему?",
-    timeLimit: 150
-  }
-];
-
-export const readingText = "";
+export type InterviewStage = typeof INTERVIEW_STAGES[keyof typeof INTERVIEW_STAGES];
+export type QuestionType = typeof QUESTION_TYPES[keyof typeof QUESTION_TYPES];
+export type AudioSettingsType = typeof AUDIO_SETTINGS;

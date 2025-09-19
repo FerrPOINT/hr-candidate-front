@@ -1,34 +1,37 @@
-// Простой тест для проверки типов и логики auth store
-describe('Auth Store Logic', () => {
-    it('should define user role types', () => {
-        type UserRole = 'ADMIN' | 'RECRUITER' | 'USER' | 'CANDIDATE' | null;
+import { authStore } from '../authStore';
 
-        const checkRole = (role: UserRole): boolean => {
-            return role !== null;
-        };
+describe('authStore', () => {
+  beforeEach(() => {
+    // Очищаем localStorage перед каждым тестом
+    localStorage.clear();
+  });
 
-        expect(checkRole('ADMIN')).toBe(true);
-        expect(checkRole('RECRUITER')).toBe(true);
-        expect(checkRole(null)).toBe(false);
-    });
+  it('экспортирует authStore', () => {
+    expect(authStore).toBeDefined();
+  });
 
-    it('should validate token structure', () => {
-        const isValidToken = (token: string): boolean => {
-            return token.length > 0 && token.includes('.');
-        };
+  it('имеет правильную структуру', () => {
+    expect(typeof authStore).toBe('object');
+    expect(authStore).toHaveProperty('isAuthenticated');
+    expect(authStore).toHaveProperty('user');
+    expect(authStore).toHaveProperty('token');
+  });
 
-        expect(isValidToken('abc.def.ghi')).toBe(true);
-        expect(isValidToken('invalid')).toBe(false);
-        expect(isValidToken('')).toBe(false);
-    });
+  it('isAuthenticated возвращает boolean', () => {
+    expect(typeof authStore.isAuthenticated).toBe('boolean');
+  });
 
-    it('should check authentication status', () => {
-        const checkAuthStatus = (token: string | null, user: any): boolean => {
-            return !!token && !!user;
-        };
+  it('user может быть null или объектом', () => {
+    expect(authStore.user === null || typeof authStore.user === 'object').toBe(true);
+  });
 
-        expect(checkAuthStatus('token', { id: '1' })).toBe(true);
-        expect(checkAuthStatus(null, { id: '1' })).toBe(false);
-        expect(checkAuthStatus('token', null)).toBe(false);
-    });
-}); 
+  it('token может быть null или строкой', () => {
+    expect(authStore.token === null || typeof authStore.token === 'string').toBe(true);
+  });
+
+  it('инициализируется с правильными значениями по умолчанию', () => {
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.user).toBeNull();
+    expect(authStore.token).toBeNull();
+  });
+});

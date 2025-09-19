@@ -1,4 +1,5 @@
 import { apiService } from '../../services/apiService';
+import { extractApiErrorMessage } from '../../utils/error';
 import type { CandidateLoginRequest, CandidateLoginResponse, CandidateEmailVerificationRequest, CandidateEmailVerificationResponse } from '../../api/models';
 import { Configuration } from '../../../generated-src/client/configuration';
 import { CandidatesApi } from '../../../generated-src/client/apis/candidates-api';
@@ -82,13 +83,7 @@ class CandidateApiService {
         config: error.config
       });
       
-      // Используем сообщение из ответа сервера, если оно есть
-      const serverMessage = error.response?.data?.message;
-      if (serverMessage) {
-        throw new Error(serverMessage);
-      } else {
-        throw new Error('Ошибка авторизации кандидата');
-      }
+      throw new Error(extractApiErrorMessage(error));
     }
   }
 
@@ -106,14 +101,7 @@ class CandidateApiService {
       return response.data;
     } catch (error: any) {
       console.error('Error verifying candidate email:', error);
-      
-      // Используем сообщение из ответа сервера, если оно есть
-      const serverMessage = error.response?.data?.message;
-      if (serverMessage) {
-        throw new Error(serverMessage);
-      } else {
-        throw new Error('Ошибка верификации email');
-      }
+      throw new Error(extractApiErrorMessage(error));
     }
   }
 

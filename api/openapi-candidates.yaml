@@ -102,7 +102,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/CandidateLoginResponse'
         '400':
-          description: Неверные параметры запроса
+          description: |
+            Неверные параметры запроса или вакансия недоступна:
+            - Вакансия не найдена
+            - Вакансия временно приостановлена
+            - Вакансия закрыта и больше не принимает заявки
+            - Вакансия не готова к прохождению (отсутствуют вопросы или не озвучены)
+            - У компании закончились собеседования
+            - Собеседование уже начато/завершено
         '500':
           description: Внутренняя ошибка сервера
       security: [ ]
@@ -913,12 +920,6 @@ components:
       type: string
       enum: [ NOT_STARTED, IN_PROGRESS, FINISHED ]
       description: Статус интервью/собеседования
-      required:
-        - welcome
-        - test
-        - completion
-        - additionalQuestions
-        - interview
 
   securitySchemes:
     CandidateAuth:

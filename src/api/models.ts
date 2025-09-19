@@ -1,44 +1,64 @@
-/* tslint:disable */
-/* eslint-disable */
-/**
- * Combined models export (Candidates-only)
- * Рефактор под доступный домен: кандидаты. Экспортируем то, что есть в генерируемых моделях,
- * а недостающие enum'ы определяем локально для совместимости типизации.
- */
+export class Candidate {
+  id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  status?: string;
+  position?: string;
+  
+  constructor(data?: Partial<Candidate>) {
+    if (data) {
+      Object.assign(this, data);
+    }
+  }
+}
 
-// Не экспортируем локальные enum'ы — используем только то, что есть в сгенерированных моделях
+export class Interview {
+  id?: string;
+  candidateId?: string;
+  status?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  questions?: Question[];
+  
+  constructor(data?: Partial<Interview>) {
+    if (data) {
+      Object.assign(this, data);
+    }
+  }
+}
 
-// Доступные из кандидатов модели/типы
-export { CandidateStatusEnum } from '../../generated-src/client/models/candidate-status-enum';
+export class Question {
+  id?: string;
+  text?: string;
+  type?: string;
+  order?: number;
+  audioUrl?: string;
+  
+  constructor(data?: Partial<Question>) {
+    if (data) {
+      Object.assign(this, data);
+    }
+  }
+}
 
-// Основные типы интервью
-export type { Interview } from '../../generated-src/client/models/interview';
+export class Answer {
+  id?: string;
+  questionId?: string;
+  candidateId?: string;
+  text?: string;
+  audioUrl?: string;
+  duration?: number;
+  
+  constructor(data?: Partial<Answer>) {
+    if (data) {
+      Object.assign(this, data);
+    }
+  }
+}
 
-export type { 
-  CandidateLoginRequest 
-} from '../../generated-src/client/models/candidate-login-request';
-export type { 
-  CandidateLoginResponse 
-} from '../../generated-src/client/models/candidate-login-response';
-export type { 
-  CandidateEmailVerificationRequest 
-} from '../../generated-src/client/models/candidate-email-verification-request';
-export type { 
-  CandidateEmailVerificationResponse 
-} from '../../generated-src/client/models/candidate-email-verification-response';
-
-// Публичные данные вакансии для кандидата
-export type { PositionSummaryResponse as PositionSummary } from '../../generated-src/client/models/position-summary-response';
-
-// Интервью (кандидатский флоу)
-export type { InterviewStartResponse } from '../../generated-src/client/models/interview-start-response';
-export type { InterviewEndResponse } from '../../generated-src/client/models/interview-end-response';
-export type { InterviewQuestionResponse } from '../../generated-src/client/models/interview-question-response';
-
-// Доп. вопросы/сообщения, аудио-тест, отправка ответа
-export type { AdditionalQuestionsResponseInner as AdditionalQuestion } from '../../generated-src/client/models/additional-questions-response-inner';
-export type { CompletionResponse } from '../../generated-src/client/models/completion-response';
-export type { WelcomeMessagesResponse } from '../../generated-src/client/models/welcome-messages-response';
-export type { MicrophoneTestResponse } from '../../generated-src/client/models/microphone-test-response';
-export type { SubmitAnswerResponse } from '../../generated-src/client/models/submit-answer-response';
-export type { PaginatedResponse } from '../../generated-src/client/models/paginated-response';
+// Экспортируем также типы
+export type CandidateType = Candidate;
+export type InterviewType = Interview;
+export type QuestionType = Question;
+export type AnswerType = Answer;

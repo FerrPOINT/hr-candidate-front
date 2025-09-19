@@ -1,7 +1,14 @@
 // Безопасный маппер для enum'ов
 // Обрабатывает случаи когда в базе данных есть значения, которых нет в enum'ах
 
-import { CandidateStatusEnum } from '../api/models';
+// Определяем enum для статуса кандидата
+export enum CandidateStatusEnum {
+  NEW = 'NEW',
+  IN_PROGRESS = 'IN_PROGRESS',
+  FINISHED = 'FINISHED',
+  REJECTED = 'REJECTED',
+  HIRED = 'HIRED',
+}
 
 // Удалить все, что связано с SourceEnum и маппингом поля source.
 
