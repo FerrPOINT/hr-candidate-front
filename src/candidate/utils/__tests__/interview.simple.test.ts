@@ -27,3 +27,4 @@ describe('interview utils (simple)', () => {
     expect(calculateProgress(10, 10)).toBe(100);
   });
 });
+

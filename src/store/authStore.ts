@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CandidateLoginRequest } from '../api/models';
+import { CandidateLoginRequest } from 'generated-src/client/models/candidate-login-request';
 import { apiService } from '../services/apiService';
 import { jwtDecode } from 'jwt-decode';
 import type { Interview } from '../api/models';
@@ -239,4 +239,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuthError(msg: string) {
     set({ error: msg });
   },
-})); 
+}));
+
+// Экспортируем объект store для тестов
+export const authStore = useAuthStore.getState(); 

@@ -21,3 +21,4 @@ export const ERROR_MESSAGES = {
   AUTH_ERROR: 'Ошибка авторизации',
   UNKNOWN_ERROR: 'Неизвестная ошибка',
 } as const;
+

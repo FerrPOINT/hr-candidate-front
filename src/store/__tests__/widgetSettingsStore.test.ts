@@ -5,6 +5,8 @@ describe('widgetSettingsStore', () => {
     // Очищаем store и localStorage перед каждым тестом
     localStorage.clear();
     useWidgetSettingsStore.setState({ settings: {} });
+    // Очищаем localStorage после установки пустого состояния
+    localStorage.removeItem('widget-settings');
   });
 
   it('инициализируется с пустыми настройками', () => {
@@ -108,6 +110,12 @@ describe('widgetSettingsStore', () => {
     // Сохраняем
     store.saveToStorage();
     
+    // Проверяем, что сохранилось в localStorage
+    const saved = localStorage.getItem('widget-settings');
+    expect(saved).toBeTruthy();
+    const parsed = JSON.parse(saved!);
+    expect(parsed).toEqual(testSettings);
+    
     // Очищаем store
     useWidgetSettingsStore.setState({ settings: {} });
     expect(useWidgetSettingsStore.getState().settings).toEqual({});
@@ -136,6 +144,9 @@ describe('widgetSettingsStore', () => {
 
   it('автоматически сохраняет в localStorage при изменениях', () => {
     const store = useWidgetSettingsStore.getState();
+    
+    // Очищаем localStorage перед тестом
+    localStorage.removeItem('widget-settings');
     
     store.setWidgetSettings('auto-save-test', { title: 'Auto Save' });
     

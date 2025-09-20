@@ -25,3 +25,4 @@ describe('voiceInterviewService (simple)', () => {
     expect(typeof voiceInterviewService.submitAnswer).toBe('function');
   });
 });
+

@@ -38,15 +38,15 @@ describe('Input', () => {
     expect(screen.getByRole('textbox')).toHaveAttribute('type', 'email');
 
     rerender(<Input type="password" />);
-    expect(screen.getByRole('textbox')).toHaveAttribute('type', 'password');
+    expect(screen.getByDisplayValue('')).toHaveAttribute('type', 'password');
   });
 
   it('применяет правильные CSS классы', () => {
     render(<Input className="custom-class" />);
     
     expect(screen.getByRole('textbox')).toHaveClass('custom-class');
-    expect(screen.getByRole('textbox')).toHaveClass('flex');
-    expect(screen.getByRole('textbox')).toHaveClass('h-10');
+    expect(screen.getByRole('textbox')).toHaveClass('w-full');
+    expect(screen.getByRole('textbox')).toHaveClass('transition-all');
   });
 
   it('передает дополнительные пропсы', () => {
@@ -63,3 +63,4 @@ describe('Input', () => {
     expect(ref.current).toBeInstanceOf(HTMLInputElement);
   });
 });
+

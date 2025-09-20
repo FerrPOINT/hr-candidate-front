@@ -1,7 +1,10 @@
 import { candidateApiService } from './candidateApiService';
 import { useAuthStore } from '../../store/authStore';
 import { logger } from '../../utils/logger';
-import type { CandidateLoginRequest, CandidateLoginResponse, CandidateEmailVerificationRequest, CandidateEmailVerificationResponse } from '../../api/models';
+// import type { CandidateLoginRequest } from 'generated-src/client/models/candidate-login-request';
+// import type { CandidateLoginResponse } from 'generated-src/client/models/candidate-login-response';
+// import type { CandidateEmailVerificationRequest } from 'generated-src/client/models/candidate-email-verification-request';
+// import type { CandidateEmailVerificationResponse } from 'generated-src/client/models/candidate-email-verification-response';
 
 export interface CandidateAuthData {
   firstName: string;
@@ -31,7 +34,7 @@ export interface AuthResponse {
 class CandidateAuthService {
   // Локальный флаг для управления проверкой email (по умолчанию выкл)
   static EMAIL_VERIFICATION_ENABLED = false;
-  private static CANDIDATE_ID_KEY = 'candidate_id';
+  public static CANDIDATE_ID_KEY = 'candidate_id';
   private static AUTH_TOKEN_KEY = 'auth_token';
 
   /**
@@ -366,6 +369,32 @@ class CandidateAuthService {
       console.error('Error getting position summary:', error);
       throw new Error('Не удалось получить информацию о вакансии');
     }
+  }
+
+  /**
+   * Сохраняет данные авторизации
+   */
+  setAuthData(data: CandidateAuthData): void {
+    logger.debug('candidateAuthService.setAuthData вызван', { email: data.email });
+    localStorage.setItem(CandidateAuthService.CANDIDATE_ID_KEY, JSON.stringify(data));
+  }
+
+  /**
+   * Получает данные авторизации
+   */
+  getAuthData(): CandidateAuthData | null {
+    logger.debug('candidateAuthService.getAuthData вызван');
+    const data = localStorage.getItem(CandidateAuthService.CANDIDATE_ID_KEY);
+    return data ? JSON.parse(data) : null;
+  }
+
+  /**
+   * Очищает данные авторизации
+   */
+  clearAuthData(): void {
+    logger.debug('candidateAuthService.clearAuthData вызван');
+    localStorage.removeItem(CandidateAuthService.CANDIDATE_ID_KEY);
+    localStorage.removeItem(CandidateAuthService.AUTH_TOKEN_KEY);
   }
 }
 

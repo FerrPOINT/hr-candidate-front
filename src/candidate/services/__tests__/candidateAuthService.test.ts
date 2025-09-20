@@ -66,3 +66,4 @@ describe('candidateAuthService', () => {
     expect(typeof candidateAuthService.isAuthenticated).toBe('function');
   });
 });
+

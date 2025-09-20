@@ -75,7 +75,8 @@
     "generate:api:all": "node scripts/generate-all-apis.js",
     "build": "set PUBLIC_URL=/candidate&& craco build",
     "build:with-tests": "npm run test:jest && craco build",
-    "test": "craco test",
+    "test": "jest --config jest.config.js --watchAll=false",
+    "test:watch": "jest --config jest.config.js",
     "test:jest": "jest --ci",
     "eject": "react-scripts eject",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx src",
@@ -99,6 +100,8 @@
     ]
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-react": "^7.27.1",
     "@craco/craco": "^7.1.0",
     "@openapitools/openapi-generator-cli": "^2.20.2",
     "@tailwindcss/line-clamp": "^0.4.4",
@@ -111,6 +114,7 @@
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "autoprefixer": "^10.4.16",
+    "babel-jest": "^30.1.2",
     "cross-env": "^7.0.3",
     "eslint": "^8.57.0",
     "http-proxy-middleware": "^3.0.5",

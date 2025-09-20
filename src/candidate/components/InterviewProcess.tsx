@@ -47,8 +47,11 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
   const [isSavingAnswer, setIsSavingAnswer] = useState(false);
   const [showContinueButton, setShowContinueButton] = useState(false);
   const [messages, setMessages] = useState<(AIMessage | { id: string; content: string; isVisible: boolean; isNew: boolean; isUser: boolean })[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [questionCards, setQuestionCards] = useState<QuestionCard[]>([]); // Оставляем для совместимости
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [userResponse, setUserResponse] = useState(''); // Оставляем для совместимости
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [isAISpeaking, setIsAISpeaking] = useState(true);
   const [showMicrophoneCard, setShowMicrophoneCard] = useState(false);

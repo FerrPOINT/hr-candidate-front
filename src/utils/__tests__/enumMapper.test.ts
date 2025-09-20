@@ -1,5 +1,4 @@
-import { mapCandidateStatusEnum } from '../enumMapper';
-import { CandidateStatusEnum } from '../../api/models';
+import { mapCandidateStatusEnum, CandidateStatusEnum } from '../enumMapper';
 
 describe('enumMapper', () => {
   describe('mapCandidateStatusEnum', () => {

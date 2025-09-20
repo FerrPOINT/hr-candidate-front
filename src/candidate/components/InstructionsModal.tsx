@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './';
-import { MicOff, ArrowRight, ArrowLeft, CheckCircle, MessageSquare, Clock, Sparkles } from 'lucide-react';
+import { CheckCircle, MessageSquare, Clock, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface InstructionsModalProps {

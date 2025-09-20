@@ -72,6 +72,7 @@ export const useWidgetSettingsStore = create<WidgetSettingsState>()(
             ...state.settings,
             [widgetType]: settings,
           };
+          // Сохраняем синхронно
           saveSettingsToStorage(newSettings);
           return { settings: newSettings };
         });
@@ -92,6 +93,7 @@ export const useWidgetSettingsStore = create<WidgetSettingsState>()(
               [key]: value,
             },
           };
+          // Сохраняем синхронно
           saveSettingsToStorage(newSettings);
           return { settings: newSettings };
         });
@@ -101,6 +103,7 @@ export const useWidgetSettingsStore = create<WidgetSettingsState>()(
         set((state) => {
           const newSettings = { ...state.settings };
           delete newSettings[widgetType];
+          // Сохраняем синхронно
           saveSettingsToStorage(newSettings);
           return { settings: newSettings };
         });

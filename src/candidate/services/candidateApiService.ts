@@ -1,32 +1,35 @@
 import { apiService } from '../../services/apiService';
 import { extractApiErrorMessage } from '../../utils/error';
-import type { CandidateLoginRequest, CandidateLoginResponse, CandidateEmailVerificationRequest, CandidateEmailVerificationResponse } from '../../api/models';
+import type { CandidateLoginRequest } from 'generated-src/client/models/candidate-login-request';
+import type { CandidateLoginResponse } from 'generated-src/client/models/candidate-login-response';
+import type { CandidateEmailVerificationRequest } from 'generated-src/client/models/candidate-email-verification-request';
+import type { CandidateEmailVerificationResponse } from 'generated-src/client/models/candidate-email-verification-response';
 import { Configuration } from '../../../generated-src/client/configuration';
 import { CandidatesApi } from '../../../generated-src/client/apis/candidates-api';
 
 // Локальные типы для кандидата (обновлены в соответствии с новым API)
-interface CandidateAuthRequest {
-  firstName: string;
-  lastName: string;
-  email: string;
-  positionId: number; // Добавляем обязательное поле согласно API спецификации
-  verificationCode?: string; // Добавлено поле для верификации
-}
+// interface CandidateAuthRequest {
+//   firstName: string;
+//   lastName: string;
+//   email: string;
+//   positionId: number; // Добавляем обязательное поле согласно API спецификации
+//   verificationCode?: string; // Добавлено поле для верификации
+// }
 
-interface CandidateAuthResponse {
-  candidate: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-  token?: string; // Токен может отсутствовать до верификации
-  verificationRequired: boolean; // Флаг необходимости верификации
-}
+// interface CandidateAuthResponse {
+//   candidate: {
+//     id: number;
+//     firstName: string;
+//     lastName: string;
+//     email: string;
+//     phone?: string;
+//     status: string;
+//     createdAt: string;
+//     updatedAt: string;
+//   };
+//   token?: string; // Токен может отсутствовать до верификации
+//   verificationRequired: boolean; // Флаг необходимости верификации
+// }
 
 // Локальные типы для интервью
 interface Interview {

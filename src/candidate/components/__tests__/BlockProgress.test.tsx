@@ -4,23 +4,23 @@ import { BlockProgress } from '../BlockProgress';
 
 describe('BlockProgress', () => {
   it('рендерит прогресс блоков', () => {
-    render(<BlockProgress />);
+    render(<BlockProgress currentStep={2} totalSteps={5} />);
     
     // Проверяем, что компонент рендерится
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
   });
 
   it('отображает прогресс', () => {
-    render(<BlockProgress progress={50} />);
+    render(<BlockProgress currentStep={3} totalSteps={10} />);
     
     // Проверяем, что есть прогресс бар
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
   });
 
   it('принимает пропсы', () => {
-    render(<BlockProgress total={10} current={5} />);
+    render(<BlockProgress currentStep={5} totalSteps={10} />);
     
     // Проверяем, что компонент рендерится
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.getByText('6')).toBeInTheDocument();
   });
 });

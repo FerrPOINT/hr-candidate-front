@@ -16,3 +16,4 @@ describe('candidate constants (simple)', () => {
     expect(typeof AUDIO_SETTINGS).toBe('object');
   });
 });
+

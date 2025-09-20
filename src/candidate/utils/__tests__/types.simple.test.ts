@@ -26,3 +26,4 @@ describe('candidate types (simple)', () => {
     expect(QuestionType.AUDIO).toBe('audio');
   });
 });
+

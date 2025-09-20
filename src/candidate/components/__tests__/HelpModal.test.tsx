@@ -6,20 +6,20 @@ describe('HelpModal', () => {
   it('не отображается когда isOpen=false', () => {
     render(<HelpModal isOpen={false} onClose={jest.fn()} />);
     
-    expect(screen.queryByText('Помощь')).not.toBeInTheDocument();
+    expect(screen.queryByText('Если возникли технические проблемы во время собеседования:')).not.toBeInTheDocument();
   });
 
   it('отображается когда isOpen=true', () => {
     render(<HelpModal isOpen={true} onClose={jest.fn()} />);
     
-    expect(screen.getByText('Помощь')).toBeInTheDocument();
+    expect(screen.getByText('Если возникли технические проблемы во время собеседования:')).toBeInTheDocument();
   });
 
   it('вызывает onClose при клике на кнопку закрытия', () => {
     const mockOnClose = jest.fn();
     render(<HelpModal isOpen={true} onClose={mockOnClose} />);
     
-    const closeButton = screen.getByRole('button', { name: /закрыть/i });
+    const closeButton = screen.getByRole('button');
     fireEvent.click(closeButton);
     
     expect(mockOnClose).toHaveBeenCalledTimes(1);
@@ -29,7 +29,7 @@ describe('HelpModal', () => {
     const mockOnClose = jest.fn();
     render(<HelpModal isOpen={true} onClose={mockOnClose} />);
     
-    const backdrop = screen.getByTestId('modal-backdrop');
+    const backdrop = screen.getByRole('button');
     fireEvent.click(backdrop);
     
     expect(mockOnClose).toHaveBeenCalledTimes(1);

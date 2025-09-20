@@ -16,3 +16,4 @@ describe('CompanyInfo (simple)', () => {
     expect(document.body).toContainHTML('div');
   });
 });
+

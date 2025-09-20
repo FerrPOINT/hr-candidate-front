@@ -1,13 +1,98 @@
 // Простые моки для node/jsdom environment
 
-// Include jest-dom matchers
-try {
-  require('@testing-library/jest-dom');
-} catch (e) {
-  // ignore if not installed
-}
+// Мокаем axios сразу в начале
+jest.mock('axios', () => ({
+  create: jest.fn(() => ({
+    get: jest.fn().mockResolvedValue({ data: {} }),
+    post: jest.fn().mockResolvedValue({ data: {} }),
+    put: jest.fn().mockResolvedValue({ data: {} }),
+    delete: jest.fn().mockResolvedValue({ data: {} }),
+    patch: jest.fn().mockResolvedValue({ data: {} }),
+    request: jest.fn().mockResolvedValue({ data: {} }),
+    interceptors: {
+      request: { use: jest.fn(), eject: jest.fn() },
+      response: { use: jest.fn(), eject: jest.fn() }
+    },
+    defaults: {
+      headers: {
+        common: {}
+      }
+    }
+  })),
+  get: jest.fn().mockResolvedValue({ data: {} }),
+  post: jest.fn().mockResolvedValue({ data: {} }),
+  put: jest.fn().mockResolvedValue({ data: {} }),
+  delete: jest.fn().mockResolvedValue({ data: {} }),
+  patch: jest.fn().mockResolvedValue({ data: {} }),
+  request: jest.fn().mockResolvedValue({ data: {} }),
+  interceptors: {
+    request: { use: jest.fn(), eject: jest.fn() },
+    response: { use: jest.fn(), eject: jest.fn() }
+  },
+  defaults: {
+    headers: {
+      common: {}
+    }
+  }
+}));
 
-// Mock localStorage/sessionStorage for tests
+// Мокаем localStorage глобально
+const localStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: jest.fn((key) => store[key] || null),
+    setItem: jest.fn((key, value) => {
+      store[key] = String(value);
+    }),
+    removeItem: jest.fn((key) => {
+      delete store[key];
+    }),
+    clear: jest.fn(() => {
+      store = {};
+    }),
+    key: jest.fn((index) => Object.keys(store)[index] || null),
+    get length() {
+      return Object.keys(store).length;
+    }
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true
+});
+
+// Также мокаем глобальный localStorage
+Object.defineProperty(global, 'localStorage', {
+  value: localStorageMock,
+  writable: true
+});
+
+// Include jest-dom matchers
+require('@testing-library/jest-dom');
+
+// Mock для React Testing Library
+const { configure } = require('@testing-library/react');
+
+configure({
+  testIdAttribute: 'data-testid',
+});
+
+// Mock для React DOM
+const React = require('react');
+
+// Убеждаемся, что React доступен глобально
+global.React = React;
+
+// Mock для React Testing Library renderHook
+const { renderHook, render, screen, fireEvent, waitFor } = require('@testing-library/react');
+global.renderHook = renderHook;
+global.render = render;
+global.screen = screen;
+global.fireEvent = fireEvent;
+global.waitFor = waitFor;
+
+// Mock sessionStorage for tests
 if (typeof window !== 'undefined') {
   const createStorageMock = () => {
     let store = {};
@@ -29,8 +114,8 @@ if (typeof window !== 'undefined') {
     };
   };
 
-  if (!('localStorage' in window)) {
-    Object.defineProperty(window, 'localStorage', {
+  if (!('sessionStorage' in window)) {
+    Object.defineProperty(window, 'sessionStorage', {
       value: createStorageMock(),
       configurable: true,
       writable: true,
@@ -149,27 +234,6 @@ if (typeof window !== 'undefined') {
   // Global URL mock for axios
   global.URL = window.URL;
 
-  // Mock axios to avoid URL constructor issues
-  jest.mock('axios', () => ({
-    create: jest.fn(() => ({
-      get: jest.fn(),
-      post: jest.fn(),
-      put: jest.fn(),
-      delete: jest.fn(),
-      interceptors: {
-        request: { use: jest.fn() },
-        response: { use: jest.fn() }
-      }
-    })),
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-    interceptors: {
-      request: { use: jest.fn() },
-      response: { use: jest.fn() }
-    }
-  }));
 }
 
 // Ensure console.error does not crash tests on expected warnings

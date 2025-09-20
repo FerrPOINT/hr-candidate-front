@@ -14,3 +14,4 @@ describe('useAudioRecording (simple)', () => {
     }).not.toThrow();
   });
 });
+

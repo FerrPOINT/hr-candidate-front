@@ -16,7 +16,7 @@ export enum CandidateStatusEnum {
 export function mapCandidateStatusEnum(value: string | null | undefined): CandidateStatusEnum {
   if (!value) return CandidateStatusEnum.NEW;
 
-  const normalized = value.toUpperCase();
+  const normalized = value.trim().toUpperCase();
 
   switch (normalized) {
     case 'NEW':

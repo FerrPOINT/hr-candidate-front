@@ -3,20 +3,6 @@ import { apiService } from '../../../services/apiService';
 
 // Моки для зависимостей
 jest.mock('../../../services/apiService');
-jest.mock('generated-src/client/configuration', () => ({
-  Configuration: jest.fn().mockImplementation(() => ({})),
-}));
-jest.mock('generated-src/client/apis/candidates-api', () => ({
-  CandidatesApi: jest.fn().mockImplementation(() => ({
-    loginCandidate: jest.fn(),
-    verifyCandidateEmail: jest.fn(),
-    startInterview: jest.fn(),
-    getCurrentQuestion: jest.fn(),
-    submitAnswer: jest.fn(),
-    endInterview: jest.fn(),
-    getCandidatePositionSummary: jest.fn(),
-  })),
-}));
 
 const mockApiService = apiService as jest.Mocked<typeof apiService>;
 

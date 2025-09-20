@@ -41,3 +41,4 @@ describe('API Models (simple)', () => {
     expect(answer).toBeInstanceOf(Answer);
   });
 });
+

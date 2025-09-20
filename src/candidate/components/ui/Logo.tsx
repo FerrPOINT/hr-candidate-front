@@ -3,9 +3,10 @@ import React from "react";
 interface LogoProps {
   size?: 'small' | 'medium' | 'large';
   className?: string;
+  'data-testid'?: string;
 }
 
-export const Logo: React.FC<LogoProps> = ({ size = 'large', className = "" }) => {
+export const Logo: React.FC<LogoProps> = ({ size = 'large', className = "", ...props }) => {
   const sizeClasses = {
     small: 'h-12',
     medium: 'h-16', 
@@ -13,7 +14,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'large', className = "" }) =>
   };
 
   return (
-    <div className={`${sizeClasses[size]} w-auto object-contain ${className}`}>
+    <div className={`${sizeClasses[size]} w-auto object-contain ${className}`} {...props}>
       <img 
         src={`${process.env.PUBLIC_URL}/images/logo.webp`}
         alt="Company Logo" 
