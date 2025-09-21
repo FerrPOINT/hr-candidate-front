@@ -24,12 +24,6 @@ export function CircularProgress({
     lg: 'w-24 h-24'
   };
   
-  const textSizes = {
-    xs: 'text-xs',
-    sm: 'text-xs',
-    md: 'text-sm',
-    lg: 'text-base'
-  };
   
   // Для размера xs показываем линейный прогресс
   if (size === 'xs') {

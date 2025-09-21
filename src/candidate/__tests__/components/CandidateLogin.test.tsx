@@ -1,13 +1,14 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import CandidateLogin from '../../pages/CandidateLogin';
 
 // Мок для candidateAuthService
 const mockAuthenticate = jest.fn();
 
 jest.mock('../../services/candidateAuthService', () => ({
   candidateAuthService: {
-    authenticate: mockAuthenticate,
+    authenticate: jest.fn(),
   },
   CandidateAuthData: jest.fn(),
 }));
@@ -19,8 +20,6 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useParams: () => ({ interviewId: '123' }),
 }));
-
-import CandidateLogin from '../../pages/CandidateLogin';
 
 describe.skip('CandidateLogin', () => {
   beforeEach(() => {

@@ -276,4 +276,5 @@ const InterviewCompletion: React.FC<InterviewCompletionProps> = ({ interviewId, 
   );
 };
 
+export { InterviewCompletion };
 export default InterviewCompletion; 

@@ -7,36 +7,36 @@ export interface InterviewStage {
   component: string;
 }
 
+const stages: InterviewStage[] = [
+  { 
+    name: 'welcome',
+    title: 'Добро пожаловать', 
+    description: 'Приветственный экран',
+    component: 'WelcomeStage'
+  },
+  { 
+    name: 'microphone',
+    title: 'Проверка микрофона', 
+    description: 'Проверим ваш микрофон',
+    component: 'MicrophoneCheckStage'
+  },
+  { 
+    name: 'question',
+    title: 'Вопрос 1', 
+    description: 'Расскажите о своем опыте работы с React',
+    component: 'QuestionStage'
+  },
+  { 
+    name: 'complete',
+    title: 'Завершение', 
+    description: 'Интервью завершено',
+    component: 'CompletionStage'
+  }
+];
+
 export const useInterviewStage = () => {
   const [currentStage, setCurrentStage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-
-  const stages: InterviewStage[] = [
-    { 
-      name: 'welcome',
-      title: 'Добро пожаловать', 
-      description: 'Приветственный экран',
-      component: 'WelcomeStage'
-    },
-    { 
-      name: 'microphone',
-      title: 'Проверка микрофона', 
-      description: 'Проверим ваш микрофон',
-      component: 'MicrophoneCheckStage'
-    },
-    { 
-      name: 'question',
-      title: 'Вопрос 1', 
-      description: 'Расскажите о своем опыте работы с React',
-      component: 'QuestionStage'
-    },
-    { 
-      name: 'complete',
-      title: 'Завершение', 
-      description: 'Интервью завершено',
-      component: 'CompletionStage'
-    }
-  ];
 
   const nextStage = useCallback(() => {
     setIsLoading(true);

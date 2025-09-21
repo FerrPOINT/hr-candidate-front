@@ -27,3 +27,4 @@ describe('candidate types (simple)', () => {
   });
 });
 
+

@@ -33,12 +33,12 @@ class ApiService {
 	async put(url: string, data?: any, config?: any): Promise<any> {
 		const token = useAuthStore.getState().token;
 		const headers = token ? { Authorization: `Bearer ${token}` } : {};
-		return axios.put(this.resolveUrl(url), data, { ...config, headers: { ...headers, ...config?.headers } });
+		return axios.put(this.resolveUrl(url), data, { ...config, headers: { ...config?.headers, ...headers } });
 	}
 	async delete(url: string, config?: any): Promise<any> {
 		const token = useAuthStore.getState().token;
 		const headers = token ? { Authorization: `Bearer ${token}` } : {};
-		return axios.delete(this.resolveUrl(url), { ...config, headers: { ...headers, ...config?.headers } });
+		return axios.delete(this.resolveUrl(url), { ...config, headers: { ...config?.headers, ...headers } });
 	}
 }
 

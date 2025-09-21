@@ -495,4 +495,5 @@ const WelcomeMessages: React.FC<WelcomeMessagesProps> = ({ interviewId, onContin
   );
 };
 
+export { WelcomeMessages };
 export default WelcomeMessages; 

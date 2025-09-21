@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from './ui/button';
 import { AudioVisualizer } from './AudioVisualizer';
-import { Mic, MicOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mic, CheckCircle, AlertCircle } from 'lucide-react';
 
 export function MicrophoneTest({ onTestComplete }: { onTestComplete: () => void }) {
   const [testStep, setTestStep] = useState<'welcome' | 'testing' | 'complete'>('welcome');

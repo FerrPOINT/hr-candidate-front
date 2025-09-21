@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { voiceInterviewService } from '../services/voiceInterviewService';
 import { 
   VoiceInterviewStartResponse, 
@@ -13,6 +13,8 @@ export function useVoiceInterview(interviewId: number) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
+  
+  const endInterviewRef = useRef<(() => Promise<any>) | null>(null);
 
   const startInterview = useCallback(async () => {
     setLoading(true);
@@ -63,7 +65,9 @@ export function useVoiceInterview(interviewId: number) {
       
       // Если это был последний вопрос, завершаем интервью
       if (currentQuestion.questionNumber >= currentQuestion.totalQuestions) {
-        await endInterview();
+        if (endInterviewRef.current) {
+          await endInterviewRef.current();
+        }
       } else {
         // Получаем следующий вопрос
         await getNextQuestion();
@@ -95,6 +99,11 @@ export function useVoiceInterview(interviewId: number) {
       setLoading(false);
     }
   }, [interviewId]);
+
+  // Обновляем ref при изменении endInterview
+  useEffect(() => {
+    endInterviewRef.current = endInterview;
+  }, [endInterview]);
 
   return {
     interviewSession,

@@ -28,14 +28,6 @@ export function InterviewFlow() {
     email: ''
   });
 
-  // Данные о позиции - можно получать из API или пропсов
-  const jobPosition: JobPosition = {
-    title: 'Software Engineer',
-    department: 'Engineering',
-    company: 'WMT group',
-    type: 'Full-time',
-    questionsCount: 8
-  };
 
   const handleAuthSuccess = (data: UserData) => {
     setUserData(data);

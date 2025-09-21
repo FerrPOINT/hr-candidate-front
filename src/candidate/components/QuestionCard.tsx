@@ -132,6 +132,7 @@ export function QuestionCard({
               onClick={handleStartRecording}
               size="lg"
               className="flex items-center gap-2 bg-[#e16349] hover:bg-[#d55a42] rounded-[12px]"
+              aria-label="Начать запись ответа"
             >
               <Mic className="w-5 h-5" />
               Начать запись
@@ -141,6 +142,7 @@ export function QuestionCard({
               onClick={handleStopRecording}
               size="lg"
               className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white rounded-[12px]"
+              aria-label="Остановить запись ответа"
             >
               <Square className="w-4 h-4" />
               Остановить запись
@@ -151,6 +153,7 @@ export function QuestionCard({
                 onClick={handleSaveAnswer}
                 size="lg"
                 className="flex items-center gap-2 bg-[#e16349] hover:bg-[#d55a42] rounded-[12px]"
+                aria-label="Сохранить записанный ответ"
               >
                 <CheckCircle className="w-5 h-5" />
                 Сохранить ответ
@@ -160,6 +163,7 @@ export function QuestionCard({
                 variant="outline"
                 size="lg"
                 className="flex items-center gap-2 bg-white border-[#e16349] text-[#e16349] hover:bg-[#e16349] hover:text-white rounded-[12px]"
+                aria-label="Записать ответ заново"
               >
                 <Mic className="w-5 h-5" />
                 Записать заново
@@ -174,6 +178,7 @@ export function QuestionCard({
             onClick={handleSkip}
             variant="ghost"
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            aria-label="Пропустить текущий вопрос"
           >
             <SkipForward className="w-4 h-4" />
             Пропустить вопрос

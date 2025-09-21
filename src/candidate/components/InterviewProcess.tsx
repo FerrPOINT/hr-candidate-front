@@ -67,14 +67,12 @@ export function InterviewProcess({ interviewId, jobPosition }: InterviewProcessP
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
   
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const skipQuestionFnRef = useRef<(() => void) | null>(null);
   const isStopInProgressRef = useRef<boolean>(false);
 
   // Аудио воспроизведение welcome-сообщений из API
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const welcomeQueueRef = useRef<{ id: string; text: string; audioUrl?: string }[]>([]);
   const completionQueueRef = useRef<{ id: string; text: string; audioUrl?: string }[]>([]);
   const testMessageRef = useRef<{ text?: string; audioUrl?: string } | null>(null);

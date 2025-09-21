@@ -4,17 +4,11 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { AudioVisualizer } from './AudioVisualizer';
 import { 
-  User, 
-  Bot, 
-  Mic, 
   MicOff, 
-  Send, 
   Play, 
-  Pause, 
-  CheckCircle, 
-  SkipForward,
-  Clock,
-  MessageSquare
+  Pause,
+  Bot,
+  User
 } from 'lucide-react';
 
 interface InteractiveChatMessageProps {

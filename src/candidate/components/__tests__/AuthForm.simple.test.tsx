@@ -1,71 +1,58 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { AuthForm } from '../AuthForm';
-import { candidateAuthService } from '../../services/candidateAuthService';
 
-// Моки для зависимостей
-jest.mock('../../services/candidateAuthService');
+// Мокаем candidateAuthService
+jest.mock('../../services/candidateAuthService', () => ({
+  candidateAuthService: {
+    getPositionSummary: jest.fn(),
+    authenticate: jest.fn(),
+  },
+}));
 
-const mockCandidateAuthService = candidateAuthService as jest.Mocked<typeof candidateAuthService>;
+const mockOnContinue = jest.fn();
+const defaultProps = {
+  onContinue: mockOnContinue,
+  positionId: 123,
+};
 
-describe('AuthForm (simple)', () => {
+describe('AuthForm - Simple Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('рендерит без ошибок', () => {
-    expect(() => {
-      render(<AuthForm />);
-    }).not.toThrow();
+  it('renders without crashing', () => {
+    render(<AuthForm {...defaultProps} />);
+    expect(screen.getByText(/продолжить/i)).toBeInTheDocument();
   });
 
-  it('отображает основной контент', () => {
-    render(<AuthForm />);
-    
-    // Проверяем, что компонент рендерится
-    expect(document.body).toContainHTML('div');
+  it('shows loading state when position is loading', () => {
+    render(<AuthForm {...defaultProps} />);
+    expect(screen.getByText(/загрузка/i)).toBeInTheDocument();
   });
 
-  it('отображает поля ввода', () => {
-    render(<AuthForm />);
-    
-    // Проверяем наличие полей ввода
-    const emailInput = screen.queryByPlaceholderText(/email/i);
-    const phoneInput = screen.queryByPlaceholderText(/phone/i);
-    
-    expect(emailInput || phoneInput).toBeTruthy();
+  it('renders with provided job position', () => {
+    const jobPosition = {
+      title: 'Backend Developer',
+      department: 'Engineering',
+      company: 'Tech Corp',
+      type: 'Full-time',
+      questionsCount: 3,
+    };
+
+    render(<AuthForm {...defaultProps} jobPosition={jobPosition} />);
+    expect(screen.getByText(/backend developer/i)).toBeInTheDocument();
   });
 
-  it('отображает кнопку отправки', () => {
-    render(<AuthForm />);
-    
-    const submitButton = screen.queryByRole('button', { name: /отправить|войти|продолжить/i });
-    expect(submitButton).toBeTruthy();
+  it('has form inputs', () => {
+    render(<AuthForm {...defaultProps} />);
+    expect(screen.getByPlaceholderText(/имя/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/фамилию/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/email/i)).toBeInTheDocument();
   });
 
-  it('обрабатывает ввод в поля формы', async () => {
-    render(<AuthForm />);
-    
-    const emailInput = screen.queryByPlaceholderText(/email/i);
-    if (emailInput) {
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      expect(emailInput).toHaveValue('test@example.com');
-    }
-  });
-
-  it('имеет кнопку отправки формы', () => {
-    render(<AuthForm />);
-    
-    const submitButton = screen.queryByRole('button', { name: /отправить|войти|продолжить/i });
-    expect(submitButton).toBeTruthy();
-  });
-
-  it('отображает поля ввода для пользователя', () => {
-    render(<AuthForm />);
-    
-    // Проверяем наличие полей ввода
-    const inputs = screen.queryAllByRole('textbox');
-    expect(inputs.length).toBeGreaterThan(0);
+  it('has help button', () => {
+    render(<AuthForm {...defaultProps} />);
+    expect(screen.getByRole('button', { name: /помощь/i })).toBeInTheDocument();
   });
 });
-

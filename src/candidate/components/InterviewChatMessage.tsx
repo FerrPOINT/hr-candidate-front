@@ -1,8 +1,7 @@
 import { motion } from 'framer-motion';
-import { Bot, User, Clock, CheckCircle } from 'lucide-react';
+import { Bot, User, CheckCircle } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { QuestionTimer } from './QuestionTimer';
-import { useEffect, useState } from 'react';
 
 interface InterviewChatMessageProps {
   type: 'ai' | 'user';
